@@ -1001,102 +1001,6 @@
   "core/audits/image-size-responsive.js | title": {
     "message": "Serves images with appropriate resolution"
   },
-  "core/audits/installable-manifest.js | already-installed": {
-    "message": "The app is already installed"
-  },
-  "core/audits/installable-manifest.js | cannot-download-icon": {
-    "message": "Could not download a required icon from the manifest"
-  },
-  "core/audits/installable-manifest.js | columnValue": {
-    "message": "Failure reason"
-  },
-  "core/audits/installable-manifest.js | description": {
-    "message": "Service worker is the technology that enables your app to use many Progressive Web App features, such as offline, add to homescreen, and push notifications. With proper service worker and manifest implementations, browsers can proactively prompt users to add your app to their homescreen, which can lead to higher engagement. [Learn more about manifest installability requirements](https://developer.chrome.com/docs/lighthouse/pwa/installable-manifest/)."
-  },
-  "core/audits/installable-manifest.js | displayValue": {
-    "message": "{itemCount, plural,\n    =1 {1 reason}\n    other {# reasons}\n    }"
-  },
-  "core/audits/installable-manifest.js | failureTitle": {
-    "message": "Web app manifest or service worker do not meet the installability requirements"
-  },
-  "core/audits/installable-manifest.js | ids-do-not-match": {
-    "message": "The Play Store app URL and Play Store ID do not match"
-  },
-  "core/audits/installable-manifest.js | in-incognito": {
-    "message": "Page is loaded in an incognito window"
-  },
-  "core/audits/installable-manifest.js | manifest-display-not-supported": {
-    "message": "Manifest `display` property must be one of `standalone`, `fullscreen`, or `minimal-ui`"
-  },
-  "core/audits/installable-manifest.js | manifest-display-override-not-supported": {
-    "message": "Manifest contains 'display_override' field, and the first supported display mode must be one of 'standalone', 'fullscreen', or 'minimal-ui'"
-  },
-  "core/audits/installable-manifest.js | manifest-empty": {
-    "message": "Manifest could not be fetched, is empty, or could not be parsed"
-  },
-  "core/audits/installable-manifest.js | manifest-location-changed": {
-    "message": "Manifest URL changed while the manifest was being fetched."
-  },
-  "core/audits/installable-manifest.js | manifest-missing-name-or-short-name": {
-    "message": "Manifest does not contain a `name` or `short_name` field"
-  },
-  "core/audits/installable-manifest.js | manifest-missing-suitable-icon": {
-    "message": "Manifest does not contain a suitable icon - PNG, SVG or WebP format of at least {value0} px is required, the sizes attribute must be set, and the purpose attribute, if set, must include \"any\"."
-  },
-  "core/audits/installable-manifest.js | no-acceptable-icon": {
-    "message": "No supplied icon is at least {value0} px square in PNG, SVG or WebP format, with the purpose attribute unset or set to \"any\""
-  },
-  "core/audits/installable-manifest.js | no-icon-available": {
-    "message": "Downloaded icon was empty or corrupted"
-  },
-  "core/audits/installable-manifest.js | no-id-specified": {
-    "message": "No Play store ID provided"
-  },
-  "core/audits/installable-manifest.js | no-manifest": {
-    "message": "Page has no manifest <link> URL"
-  },
-  "core/audits/installable-manifest.js | no-url-for-service-worker": {
-    "message": "Could not check service worker without a 'start_url' field in the manifest"
-  },
-  "core/audits/installable-manifest.js | noErrorId": {
-    "message": "Installability error id '{errorId}' is not recognized"
-  },
-  "core/audits/installable-manifest.js | not-from-secure-origin": {
-    "message": "Page is not served from a secure origin"
-  },
-  "core/audits/installable-manifest.js | not-in-main-frame": {
-    "message": "Page is not loaded in the main frame"
-  },
-  "core/audits/installable-manifest.js | not-offline-capable": {
-    "message": "Page does not work offline"
-  },
-  "core/audits/installable-manifest.js | pipeline-restarted": {
-    "message": "PWA has been uninstalled and installability checks resetting."
-  },
-  "core/audits/installable-manifest.js | platform-not-supported-on-android": {
-    "message": "The specified application platform is not supported on Android"
-  },
-  "core/audits/installable-manifest.js | prefer-related-applications": {
-    "message": "Manifest specifies prefer_related_applications: true"
-  },
-  "core/audits/installable-manifest.js | prefer-related-applications-only-beta-stable": {
-    "message": "prefer_related_applications is only supported on Chrome Beta and Stable channels on Android."
-  },
-  "core/audits/installable-manifest.js | protocol-timeout": {
-    "message": "Lighthouse could not determine if the page is installable. Please try with a newer version of Chrome."
-  },
-  "core/audits/installable-manifest.js | start-url-not-valid": {
-    "message": "Manifest start URL is not valid"
-  },
-  "core/audits/installable-manifest.js | title": {
-    "message": "Web app manifest and service worker meet the installability requirements"
-  },
-  "core/audits/installable-manifest.js | url-not-supported-for-webapk": {
-    "message": "A URL in the manifest contains a username, password, or port"
-  },
-  "core/audits/installable-manifest.js | warn-not-offline-capable": {
-    "message": "Page does not work offline. The page will not be regarded as installable after Chrome 93, stable release August 2021."
-  },
   "core/audits/is-on-https.js | allowed": {
     "message": "Allowed"
   },
@@ -1192,33 +1096,6 @@
   },
   "core/audits/mainthread-work-breakdown.js | title": {
     "message": "Minimizes main-thread work"
-  },
-  "core/audits/manual/pwa-cross-browser.js | description": {
-    "message": "To reach the most number of users, sites should work across every major browser. [Learn about cross-browser compatibility](https://developer.chrome.com/docs/lighthouse/pwa/pwa-cross-browser/)."
-  },
-  "core/audits/manual/pwa-cross-browser.js | title": {
-    "message": "Site works cross-browser"
-  },
-  "core/audits/manual/pwa-each-page-has-url.js | description": {
-    "message": "Ensure individual pages are deep linkable via URL and that URLs are unique for the purpose of shareability on social media. [Learn more about providing deep links](https://developer.chrome.com/docs/lighthouse/pwa/pwa-each-page-has-url/)."
-  },
-  "core/audits/manual/pwa-each-page-has-url.js | title": {
-    "message": "Each page has a URL"
-  },
-  "core/audits/manual/pwa-page-transitions.js | description": {
-    "message": "Transitions should feel snappy as you tap around, even on a slow network. This experience is key to a user's perception of performance. [Learn more about page transitions](https://developer.chrome.com/docs/lighthouse/pwa/pwa-page-transitions/)."
-  },
-  "core/audits/manual/pwa-page-transitions.js | title": {
-    "message": "Page transitions don't feel like they block on the network"
-  },
-  "core/audits/maskable-icon.js | description": {
-    "message": "A maskable icon ensures that the image fills the entire shape without being letterboxed when installing the app on a device. [Learn about maskable manifest icons](https://developer.chrome.com/docs/lighthouse/pwa/maskable-icon-audit/)."
-  },
-  "core/audits/maskable-icon.js | failureTitle": {
-    "message": "Manifest doesn't have a maskable icon"
-  },
-  "core/audits/maskable-icon.js | title": {
-    "message": "Manifest has a maskable icon"
   },
   "core/audits/metrics/cumulative-layout-shift.js | description": {
     "message": "Cumulative Layout Shift measures the movement of visible elements within the viewport. [Learn more about the Cumulative Layout Shift metric](https://web.dev/articles/cls)."
@@ -1513,15 +1390,6 @@
   },
   "core/audits/server-response-time.js | title": {
     "message": "Initial server response time was short"
-  },
-  "core/audits/splash-screen.js | description": {
-    "message": "A themed splash screen ensures a high-quality experience when users launch your app from their homescreens. [Learn more about splash screens](https://developer.chrome.com/docs/lighthouse/pwa/splash-screen/)."
-  },
-  "core/audits/splash-screen.js | failureTitle": {
-    "message": "Is not configured for a custom splash screen"
-  },
-  "core/audits/splash-screen.js | title": {
-    "message": "Configured for a custom splash screen"
   },
   "core/audits/themed-omnibox.js | description": {
     "message": "The browser address bar can be themed to match your site. [Learn more about theming the address bar](https://developer.chrome.com/docs/lighthouse/pwa/themed-omnibox/)."
@@ -3111,22 +2979,22 @@
     "message": "Use [`Gzip compression`](https://support.nitropack.io/hc/en-us/articles/13229297479313-Enabling-GZIP-compression) in NitroPack to reduce the size of the files that are sent to the browser."
   },
   "node_modules/lighthouse-stack-packs/packs/nuxt.js | modern-image-formats": {
-    "message": "Use the `nuxt/image` component and set `format=\"webp\"`. [Learn more](https://image.nuxtjs.org/components/nuxt-img#format)."
+    "message": "Use the `nuxt/image` component and set `format=\"webp\"`. [Learn more](https://image.nuxt.com/usage/nuxt-img#format)."
   },
   "node_modules/lighthouse-stack-packs/packs/nuxt.js | offscreen-images": {
-    "message": "Use the `nuxt/image` component and set `loading=\"lazy\"` for offscreen images. [Learn more](https://image.nuxtjs.org/components/nuxt-img#loading)."
+    "message": "Use the `nuxt/image` component and set `loading=\"lazy\"` for offscreen images. [Learn more](https://image.nuxt.com/usage/nuxt-img#loading)."
   },
   "node_modules/lighthouse-stack-packs/packs/nuxt.js | prioritize-lcp-image": {
-    "message": "Use the `nuxt/image` component and specify `preload` for LCP image. [Learn more](https://image.nuxtjs.org/components/nuxt-img#preload)."
+    "message": "Use the `nuxt/image` component and specify `preload` for LCP image. [Learn more](https://image.nuxt.com/usage/nuxt-img#preload)."
   },
   "node_modules/lighthouse-stack-packs/packs/nuxt.js | unsized-images": {
-    "message": "Use the `nuxt/image` component and specify explicit `width` and `height`. [Learn more](https://image.nuxtjs.org/components/nuxt-img#width--height)."
+    "message": "Use the `nuxt/image` component and specify explicit `width` and `height`. [Learn more](https://image.nuxt.com/usage/nuxt-img#width-height)."
   },
   "node_modules/lighthouse-stack-packs/packs/nuxt.js | uses-optimized-images": {
-    "message": "Use the `nuxt/image` component and set the appropriate `quality`. [Learn more](https://image.nuxtjs.org/components/nuxt-img#quality)."
+    "message": "Use the `nuxt/image` component and set the appropriate `quality`. [Learn more](https://image.nuxt.com/usage/nuxt-img#quality)."
   },
   "node_modules/lighthouse-stack-packs/packs/nuxt.js | uses-responsive-images": {
-    "message": "Use the `nuxt/image` component and set the appropriate `sizes`. [Learn more](https://image.nuxtjs.org/components/nuxt-img#sizes)."
+    "message": "Use the `nuxt/image` component and set the appropriate `sizes`. [Learn more](https://image.nuxt.com/usage/nuxt-img#sizes)."
   },
   "node_modules/lighthouse-stack-packs/packs/octobercms.js | efficient-animated-content": {
     "message": "[Replace animated GIFs with video](https://web.dev/replace-gifs-with-videos/) for faster web page loads and consider using modern file formats such as [WebM](https://web.dev/replace-gifs-with-videos/#create-webm-videos) or [AV1](https://developers.google.com/web/updates/2018/09/chrome-70-media-updates#av1-decoder) to improve compression efficiency by greater than 30% over the current state-of-the-art video codec, VP9."
