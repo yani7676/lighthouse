@@ -27,6 +27,10 @@ const packagePath = `${distDir}/../extension-${browserBrand}-package`;
 const manifestVersion = readJson(`${sourceDir}/manifest.json`).version;
 
 async function buildEntryPoint() {
+  const locales = fs.readdirSync(`${LH_ROOT}/shared/localization/locales`)
+    .filter(f => !f.includes('.ctc.json'))
+    .map(f => f.replace('.json', ''))
+    .filter(locale => !['en-XA', 'en-XL', 'ar-XB'].includes(locale));
   await esbuild.build({
     entryPoints: [`${sourceDir}/scripts/${sourceName}`],
     outfile: `${distDir}/scripts/${distName}`,
@@ -38,6 +42,7 @@ async function buildEntryPoint() {
       plugins.bulkLoader([
         plugins.partialLoaders.replaceText({
           '___BROWSER_BRAND___': browserBrand,
+          '__LOCALES__': JSON.stringify(locales),
         }),
       ]),
     ],

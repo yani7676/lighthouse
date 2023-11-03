@@ -89,20 +89,21 @@ async function dismissJavaScriptDialogs(session) {
  * Reset the storage and warn if any stored data could be affecting the scores.
  * @param {LH.Gatherer.ProtocolSession} session
  * @param {string} url
+ * @param {LH.Config.Settings['clearStorageTypes']} clearStorageTypes
  * @return {Promise<{warnings: Array<LH.IcuMessage>}>}
  */
-async function resetStorageForUrl(session, url) {
+async function resetStorageForUrl(session, url, clearStorageTypes) {
   /** @type {Array<LH.IcuMessage>} */
   const warnings = [];
 
-  const importantStorageWarning = await storage.getImportantStorageWarning(session, url);
-  if (importantStorageWarning) warnings.push(importantStorageWarning);
-
-  const clearDataWarnings = await storage.clearDataForOrigin(session, url);
+  const clearDataWarnings = await storage.clearDataForOrigin(session, url, clearStorageTypes);
   warnings.push(...clearDataWarnings);
 
   const clearCacheWarnings = await storage.clearBrowserCaches(session);
   warnings.push(...clearCacheWarnings);
+
+  const importantStorageWarning = await storage.getImportantStorageWarning(session, url);
+  if (importantStorageWarning) warnings.push(importantStorageWarning);
 
   return {warnings};
 }
@@ -215,8 +216,9 @@ async function prepareTargetForNavigationMode(driver, settings, requestor) {
     // Without prior knowledge of the destination, we cannot know which URL to clear storage for.
     typeof requestor === 'string';
   if (shouldResetStorage) {
-    const {warnings: storageWarnings} =
-      await resetStorageForUrl(driver.defaultSession, requestor);
+    const {warnings: storageWarnings} = await resetStorageForUrl(driver.defaultSession,
+      requestor,
+      settings.clearStorageTypes);
     warnings.push(...storageWarnings);
   }
 

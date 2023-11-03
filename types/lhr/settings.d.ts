@@ -4,6 +4,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+import type {Protocol as Crdp} from 'devtools-protocol/types/protocol.js';
+
 import Budget from './budget.js';
 
 export type Locale = 'en-US'|'en'|'en-AU'|'en-GB'|'en-IE'|'en-SG'|'en-ZA'|'en-IN'|'ar-XB'|'ar'|'bg'|'ca'|'cs'|'da'|'de'|'el'|'en-XA'|'en-XL'|'es'|'es-419'|'es-AR'|'es-BO'|'es-BR'|'es-BZ'|'es-CL'|'es-CO'|'es-CR'|'es-CU'|'es-DO'|'es-EC'|'es-GT'|'es-HN'|'es-MX'|'es-NI'|'es-PA'|'es-PE'|'es-PR'|'es-PY'|'es-SV'|'es-US'|'es-UY'|'es-VE'|'fi'|'fil'|'fr'|'he'|'hi'|'hr'|'hu'|'gsw'|'id'|'in'|'it'|'iw'|'ja'|'ko'|'lt'|'lv'|'mo'|'nl'|'nb'|'no'|'pl'|'pt'|'pt-PT'|'ro'|'ru'|'sk'|'sl'|'sr'|'sr-Latn'|'sv'|'ta'|'te'|'th'|'tl'|'tr'|'uk'|'vi'|'zh'|'zh-HK'|'zh-TW';
@@ -69,6 +71,14 @@ export type ScreenEmulationSettings = {
   gatherMode?: boolean | string;
   /** Flag indicating that the browser storage should not be reset for the audit. */
   disableStorageReset?: boolean;
+  /**
+   * Flag indicating which kinds of browser storage should be reset for the audit.
+   * Cookies are not cleared by default, so the user isn't logged out.
+   * indexeddb, websql, and localstorage are not cleared by default to prevent
+   * loss of potentially important data.
+   * https://chromedevtools.github.io/debugger-protocol-viewer/tot/Storage/#type-StorageType
+   */
+  clearStorageTypes?: Crdp.Storage.StorageType[];
   /** Flag indicating that Lighthouse should pause after page load to wait for the user's permission to continue the audit. */
   debugNavigation?: boolean;
   /** If set to true, will skip the initial navigation to about:blank. */

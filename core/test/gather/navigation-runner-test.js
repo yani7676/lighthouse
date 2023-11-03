@@ -459,6 +459,13 @@ describe('NavigationRunner', () => {
       expect(mocks.storageMock.clearDataForOrigin).toHaveBeenCalled();
     });
 
+    it('should clear storage with user-config clearStorageTypes', async () => {
+      resolvedConfig.settings.disableStorageReset = false;
+      resolvedConfig.settings.clearStorageTypes = ['cookies', 'indexeddb'];
+      await runner._cleanup({requestedUrl, driver, resolvedConfig});
+      expect(mocks.storageMock.clearDataForOrigin).toHaveBeenCalledWith(expect.anything(), 'http://example.com', ['cookies', 'indexeddb']);
+    });
+
     it('should not clear storage when storage reset was disabled', async () => {
       resolvedConfig.settings.disableStorageReset = true;
       await runner._cleanup({requestedUrl, driver, resolvedConfig});

@@ -106,6 +106,7 @@ const defaultSettings = {
 
   auditMode: false,
   gatherMode: false,
+  clearStorageTypes: ['file_systems', 'shader_cache', 'service_workers', 'cache_storage'],
   disableStorageReset: false,
   debugNavigation: false,
   channel: 'node',

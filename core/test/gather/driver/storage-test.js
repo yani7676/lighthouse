@@ -20,12 +20,27 @@ describe('.clearDataForOrigin', () => {
     sessionMock.sendCommand.mockResponse('Storage.clearDataForOrigin', ({storageTypes}) => {
       foundStorageTypes = storageTypes;
     });
-    const warnings = await storage.clearDataForOrigin(sessionMock.asSession(), 'https://example.com');
+    const warnings = await storage.clearDataForOrigin(sessionMock.asSession(), 'https://example.com', ['file_systems', 'shader_cache', 'service_workers', 'cache_storage']);
     // Should not see cookies, websql, indexeddb, or local_storage.
     // Cookies are not cleared to preserve login.
     // websql, indexeddb, and local_storage are not cleared to preserve important user data.
     expect(foundStorageTypes).toMatchInlineSnapshot(
       `"file_systems,shader_cache,service_workers,cache_storage"`
+    );
+    expect(warnings).toHaveLength(0);
+  });
+
+  it('only clears data from config-specified location', async () => {
+    let foundStorageTypes;
+    sessionMock.sendCommand.mockResponse('Storage.clearDataForOrigin', ({storageTypes}) => {
+      foundStorageTypes = storageTypes;
+    });
+    const warnings = await storage.clearDataForOrigin(sessionMock.asSession(), 'https://example.com', ['cookies', 'cache_storage']);
+    // Should not see cookies, websql, indexeddb, or local_storage.
+    // Cookies are not cleared to preserve login.
+    // websql, indexeddb, and local_storage are not cleared to preserve important user data.
+    expect(foundStorageTypes).toMatchInlineSnapshot(
+      `"cookies,cache_storage"`
     );
     expect(warnings).toHaveLength(0);
   });
@@ -37,7 +52,7 @@ describe('.clearDataForOrigin', () => {
         {protocolMethod: 'Storage.clearDataForOrigin'}
       );
     });
-    const warnings = await storage.clearDataForOrigin(sessionMock.asSession(), 'https://example.com');
+    const warnings = await storage.clearDataForOrigin(sessionMock.asSession(), 'https://example.com', []);
     expect(warnings).toHaveLength(1);
     expect(warnings[0]).toBeDisplayString(
       'Clearing the origin data timed out. ' +
@@ -49,7 +64,7 @@ describe('.clearDataForOrigin', () => {
     sessionMock.sendCommand.mockResponse('Storage.clearDataForOrigin', () => {
       throw new Error('Not a timeout');
     });
-    const resultPromise = storage.clearDataForOrigin(sessionMock.asSession(), 'https://example.com');
+    const resultPromise = storage.clearDataForOrigin(sessionMock.asSession(), 'https://example.com', []);
     await expect(resultPromise).rejects.toThrow('Not a timeout');
   });
 });

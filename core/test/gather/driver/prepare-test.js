@@ -245,6 +245,19 @@ describe('.prepareTargetForNavigationMode()', () => {
     expect(storageMock.clearBrowserCaches).toHaveBeenCalled();
   });
 
+  it('clears storage types specified by user', async () => {
+    await prepare.prepareTargetForNavigationMode(driverMock.asDriver(), {
+      ...constants.defaultSettings,
+      disableStorageReset: false,
+      clearStorageTypes: ['cookies', 'shared_storage']},
+      url);
+
+    expect(storageMock.clearDataForOrigin).toHaveBeenCalledWith(expect.anything(),
+      url,
+      ['cookies', 'shared_storage']);
+    expect(storageMock.clearBrowserCaches).toHaveBeenCalled();
+  });
+
   it('does not clear storage when globally disabled', async () => {
     await prepare.prepareTargetForNavigationMode(driverMock.asDriver(), {
       ...constants.defaultSettings,
@@ -275,9 +288,9 @@ describe('.prepareTargetForNavigationMode()', () => {
     }, url);
 
     expect(warnings).toEqual([
-      'This is a storage warning',
       'This is a clear data warning',
       'This is a clear cache warning',
+      'This is a storage warning',
     ]);
   });
 });

@@ -38,6 +38,7 @@ function createConfig(categoryIDs, device) {
     // In DevTools, emulation is applied _before_ Lighthouse starts (to deal with viewport emulation bugs). go/xcnjf
     // As a result, we don't double-apply viewport emulation.
     screenEmulation: {disabled: true},
+    ignoreStatusCode: true,
   };
   if (device === 'desktop') {
     settings.throttling = constants.throttling.desktopDense4G;

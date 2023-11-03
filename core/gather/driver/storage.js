@@ -36,9 +36,10 @@ const str_ = i18n.createIcuMessageFn(import.meta.url, UIStrings);
 /**
  * @param {LH.Gatherer.ProtocolSession} session
  * @param {string} url
+ * @param {LH.Config.Settings['clearStorageTypes']} clearStorageTypes
  * @return {Promise<LH.IcuMessage[]>}
  */
-async function clearDataForOrigin(session, url) {
+async function clearDataForOrigin(session, url, clearStorageTypes) {
   const status = {msg: 'Cleaning origin data', id: 'lh:storage:clearDataForOrigin'};
   log.time(status);
 
@@ -46,17 +47,7 @@ async function clearDataForOrigin(session, url) {
 
   const origin = new URL(url).origin;
 
-  // Clear some types of storage.
-  // Cookies are not cleared, so the user isn't logged out.
-  // indexeddb, websql, and localstorage are not cleared to prevent loss of potentially important data.
-  //   https://chromedevtools.github.io/debugger-protocol-viewer/tot/Storage/#type-StorageType
-  const typesToClear = [
-    // 'cookies',
-    'file_systems',
-    'shader_cache',
-    'service_workers',
-    'cache_storage',
-  ].join(',');
+  const typesToClear = clearStorageTypes.join(',');
 
   // `Storage.clearDataForOrigin` is one of our PROTOCOL_TIMEOUT culprits and this command is also
   // run in the context of PAGE_HUNG to cleanup. We'll keep the timeout low and just warn if it fails.

@@ -247,7 +247,12 @@ async function _navigation(navigationContext) {
  */
 async function _cleanup({requestedUrl, driver, resolvedConfig, lhBrowser, lhPage}) {
   const didResetStorage = !resolvedConfig.settings.disableStorageReset && requestedUrl;
-  if (didResetStorage) await storage.clearDataForOrigin(driver.defaultSession, requestedUrl);
+  if (didResetStorage) {
+    await storage.clearDataForOrigin(driver.defaultSession,
+    requestedUrl,
+    resolvedConfig.settings.clearStorageTypes
+    );
+  }
 
   await driver.disconnect();
 
