@@ -2979,22 +2979,22 @@
     "message": "Ûśê [`Gzip compression`](https://support.nitropack.io/hc/en-us/articles/13229297479313-Enabling-GZIP-compression) ín̂ Ńît́r̂óP̂áĉḱ t̂ó r̂éd̂úĉé t̂h́ê śîźê óf̂ t́ĥé f̂íl̂éŝ t́ĥát̂ ár̂é ŝén̂t́ t̂ó t̂h́ê b́r̂óŵśêŕ."
   },
   "node_modules/lighthouse-stack-packs/packs/nuxt.js | modern-image-formats": {
-    "message": "Ûśê t́ĥé `nuxt/image` ĉóm̂ṕôńêńt̂ án̂d́ ŝét̂ `format=\"webp\"`. [Ĺêár̂ń m̂ór̂é](https://image.nuxt.com/usage/nuxt-img#format)."
+    "message": "Ûśê t́ĥé `nuxt/image` ĉóm̂ṕôńêńt̂ án̂d́ ŝét̂ `format=\"webp\"`. [Ĺêár̂ń m̂ór̂é](https://image.nuxtjs.org/components/nuxt-img#format)."
   },
   "node_modules/lighthouse-stack-packs/packs/nuxt.js | offscreen-images": {
-    "message": "Ûśê t́ĥé `nuxt/image` ĉóm̂ṕôńêńt̂ án̂d́ ŝét̂ `loading=\"lazy\"` f́ôŕ ôf́f̂śĉŕêén̂ ím̂áĝéŝ. [Ĺêár̂ń m̂ór̂é](https://image.nuxt.com/usage/nuxt-img#loading)."
+    "message": "Ûśê t́ĥé `nuxt/image` ĉóm̂ṕôńêńt̂ án̂d́ ŝét̂ `loading=\"lazy\"` f́ôŕ ôf́f̂śĉŕêén̂ ím̂áĝéŝ. [Ĺêár̂ń m̂ór̂é](https://image.nuxtjs.org/components/nuxt-img#loading)."
   },
   "node_modules/lighthouse-stack-packs/packs/nuxt.js | prioritize-lcp-image": {
-    "message": "Ûśê t́ĥé `nuxt/image` ĉóm̂ṕôńêńt̂ án̂d́ ŝṕêćîf́ŷ `preload` f́ôŕ L̂ĆP̂ ím̂áĝé. [L̂éâŕn̂ ḿôŕê](https://image.nuxt.com/usage/nuxt-img#preload)."
+    "message": "Ûśê t́ĥé `nuxt/image` ĉóm̂ṕôńêńt̂ án̂d́ ŝṕêćîf́ŷ `preload` f́ôŕ L̂ĆP̂ ím̂áĝé. [L̂éâŕn̂ ḿôŕê](https://image.nuxtjs.org/components/nuxt-img#preload)."
   },
   "node_modules/lighthouse-stack-packs/packs/nuxt.js | unsized-images": {
-    "message": "Ûśê t́ĥé `nuxt/image` ĉóm̂ṕôńêńt̂ án̂d́ ŝṕêćîf́ŷ éx̂ṕl̂íĉít̂ `width` án̂d́ `height`. [L̂éâŕn̂ ḿôŕê](https://image.nuxt.com/usage/nuxt-img#width-height)."
+    "message": "Ûśê t́ĥé `nuxt/image` ĉóm̂ṕôńêńt̂ án̂d́ ŝṕêćîf́ŷ éx̂ṕl̂íĉít̂ `width` án̂d́ `height`. [L̂éâŕn̂ ḿôŕê](https://image.nuxtjs.org/components/nuxt-img#width--height)."
   },
   "node_modules/lighthouse-stack-packs/packs/nuxt.js | uses-optimized-images": {
-    "message": "Ûśê t́ĥé `nuxt/image` ĉóm̂ṕôńêńt̂ án̂d́ ŝét̂ t́ĥé âṕp̂ŕôṕr̂íât́ê `quality`. [Ĺêár̂ń m̂ór̂é](https://image.nuxt.com/usage/nuxt-img#quality)."
+    "message": "Ûśê t́ĥé `nuxt/image` ĉóm̂ṕôńêńt̂ án̂d́ ŝét̂ t́ĥé âṕp̂ŕôṕr̂íât́ê `quality`. [Ĺêár̂ń m̂ór̂é](https://image.nuxtjs.org/components/nuxt-img#quality)."
   },
   "node_modules/lighthouse-stack-packs/packs/nuxt.js | uses-responsive-images": {
-    "message": "Ûśê t́ĥé `nuxt/image` ĉóm̂ṕôńêńt̂ án̂d́ ŝét̂ t́ĥé âṕp̂ŕôṕr̂íât́ê `sizes`. [Ĺêár̂ń m̂ór̂é](https://image.nuxt.com/usage/nuxt-img#sizes)."
+    "message": "Ûśê t́ĥé `nuxt/image` ĉóm̂ṕôńêńt̂ án̂d́ ŝét̂ t́ĥé âṕp̂ŕôṕr̂íât́ê `sizes`. [Ĺêár̂ń m̂ór̂é](https://image.nuxtjs.org/components/nuxt-img#sizes)."
   },
   "node_modules/lighthouse-stack-packs/packs/octobercms.js | efficient-animated-content": {
     "message": "[R̂ép̂ĺâćê án̂ím̂át̂éd̂ ǴÎF́ŝ ẃît́ĥ v́îd́êó](https://web.dev/replace-gifs-with-videos/) f̂ór̂ f́âśt̂ér̂ ẃêb́ p̂áĝé l̂óâd́ŝ án̂d́ ĉón̂śîd́êŕ ûśîńĝ ḿôd́êŕn̂ f́îĺê f́ôŕm̂át̂ś ŝúĉh́ âś [Ŵéb̂Ḿ](https://web.dev/replace-gifs-with-videos/#create-webm-videos) ôŕ [ÂV́1](https://developers.google.com/web/updates/2018/09/chrome-70-media-updates#av1-decoder) t̂ó îḿp̂ŕôv́ê ćôḿp̂ŕêśŝíôń êf́f̂íĉíêńĉý b̂ý ĝŕêát̂ér̂ t́ĥán̂ 30% óv̂ér̂ t́ĥé ĉúr̂ŕêńt̂ śt̂át̂é-ôf́-t̂h́ê-ár̂t́ v̂íd̂éô ćôd́êć, V̂Ṕ9."
