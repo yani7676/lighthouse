@@ -13,6 +13,9 @@
 import BaseGatherer from '../base-gatherer.js';
 import {TraceProcessor} from '../../lib/tracehouse/trace-processor.js';
 
+// import * as TraceEngine from '@paulirish/trace_engine';
+import * as TraceEngine from './tmp-trace-engine/trace-engine.js';
+
 class Trace extends BaseGatherer {
   /** @type {LH.Trace} */
   _trace = {traceEvents: []};
@@ -55,6 +58,9 @@ class Trace extends BaseGatherer {
       // loading traces from Lighthouse into the Performance panel.
       'disabled-by-default-devtools.timeline.frame',
       'latencyInfo',
+
+      // For CLS root causes.
+      'disabled-by-default-devtools.timeline.invalidationTracking',
 
       // A bug introduced in M92 causes these categories to crash targets on Linux.
       // See https://github.com/GoogleChrome/lighthouse/issues/12835 for full investigation.
@@ -103,6 +109,8 @@ class Trace extends BaseGatherer {
   async startSensitiveInstrumentation({driver, gatherMode, settings}) {
     const traceCategories = Trace.getDefaultTraceCategories()
       .concat(settings.additionalTraceCategories || []);
+    await driver.defaultSession.sendCommand('DOM.enable');
+    await driver.defaultSession.sendCommand('CSS.enable');
     await driver.defaultSession.sendCommand('Page.enable');
     await driver.defaultSession.sendCommand('Tracing.start', {
       categories: traceCategories.join(','),
@@ -120,6 +128,70 @@ class Trace extends BaseGatherer {
    */
   async stopSensitiveInstrumentation({driver}) {
     this._trace = await Trace.endTraceAndCollectEvents(driver.defaultSession);
+    this._traceEngineResult = await Trace.runTraceEngine(driver, this._trace);
+  }
+
+  /**
+   * @param {LH.Gatherer.Driver} driver
+   * @param {LH.Trace} trace
+   */
+  static async runTraceEngine(driver, trace) {
+    const protocolInterface = {
+      getInitiatorForRequest(url) {
+        return null;
+      },
+      async pushNodesByBackendIdsToFrontend(backendNodeIds) {
+        await driver.defaultSession.sendCommand('DOM.getDocument', {depth: -1, pierce: true});
+        const response = await driver.defaultSession.sendCommand('DOM.pushNodesByBackendIdsToFrontend', {backendNodeIds});
+        return response.nodeIds;
+      },
+      async getNode(nodeId) {
+        const response = await driver.defaultSession.sendCommand('DOM.describeNode', {nodeId});
+        // Why is this always zero? Uh, let's fix it here.
+        response.node.nodeId = nodeId;
+        return response.node;
+      },
+      async getComputedStyleForNode(nodeId) {
+        try {
+          const response = await driver.defaultSession.sendCommand('CSS.getComputedStyleForNode', {nodeId});
+          return response.computedStyle;
+        } catch {
+          return [];
+        }
+      },
+      async getMatchedStylesForNode(nodeId) {
+        try {
+          const response = await driver.defaultSession.sendCommand('CSS.getMatchedStylesForNode', {nodeId});
+          return response;
+        } catch {
+          return [];
+        }
+      },
+      async fontFaceForSource(url) {
+        return null;
+      },
+    };
+
+    const engine = TraceEngine.Processor.TraceProcessor.createWithAllHandlers();
+    await engine.parse(trace.traceEvents);
+    const data = engine.data;
+
+    // test with http://localhost:10503/perf/trace-elements.html
+    // or https://chromedevtools.github.io/performance-stories/layout-shift/index.html
+    const rootCauses = {
+      layoutShifts: new Map(),
+    };
+    for (const cluster of data.LayoutShifts.clusters) {
+      for (const event of cluster.events) {
+        const r = await TraceEngine.RootCauses.LayoutShift.rootCausesForEvent(protocolInterface, data, event);
+        rootCauses.layoutShifts.set(event, r);
+      }
+    }
+
+    return {
+      data,
+      rootCauses,
+    };
   }
 
   getArtifact() {

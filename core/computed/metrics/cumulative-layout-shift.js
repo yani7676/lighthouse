@@ -4,7 +4,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import * as TraceModel from '@paulirish/trace_engine';
+import * as TraceEngine from '@paulirish/trace_engine';
+// import * as TraceEngine from './tmp-trace-engine/trace-engine.js';
 // does polyfillDOMRect
 import '@paulirish/trace_engine/analyze-trace.mjs';
 
@@ -165,7 +166,7 @@ class CumulativeLayoutShift {
 
     let useNewTraceEngine = true;
 
-    // TODO: TraceModel always drops `had_recent_input` events, but Lighthouse is more lenient.
+    // TODO: TraceEngine always drops `had_recent_input` events, but Lighthouse is more lenient.
     // See comment in `getLayoutShiftEvents`.
     if (allFrameShiftEvents.some(e => e.event.args.data?.had_recent_input)) {
       useNewTraceEngine = false;
@@ -175,9 +176,9 @@ class CumulativeLayoutShift {
     if (useNewTraceEngine) {
       /** @param {LH.TraceEvent[]} events */
       async function run(events) {
-        const processor = new TraceModel.Processor.TraceProcessor({
-          LayoutShifts: TraceModel.Handlers.ModelHandlers.LayoutShifts,
-          Screenshots: TraceModel.Handlers.ModelHandlers.Screenshots,
+        const processor = new TraceEngine.Processor.TraceProcessor({
+          LayoutShifts: TraceEngine.Handlers.ModelHandlers.LayoutShifts,
+          Screenshots: TraceEngine.Handlers.ModelHandlers.Screenshots,
         });
         await processor.parse(events);
         return processor.data.LayoutShifts.sessionMaxScore;
