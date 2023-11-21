@@ -199,7 +199,7 @@ Array [
     "url": "http://localhost:10200/simple-worker.js",
   },
   Object {
-    "sessionTargetType": "worker",
+    "sessionTargetType": "page",
     "url": "http://localhost:10200/simple-worker.mjs",
   },
   Object {
@@ -219,7 +219,7 @@ Array [
     "url": "http://localhost:10503/simple-worker.js",
   },
   Object {
-    "sessionTargetType": "worker",
+    "sessionTargetType": "iframe",
     "url": "http://localhost:10503/simple-worker.mjs",
   },
 ]

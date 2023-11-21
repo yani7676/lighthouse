@@ -663,6 +663,11 @@ message I18n {
     // This label is for a button that will show the user a trace of the page.
     string dropdown_view_unthrottled_trace = 64;
 
+    // Descriptive label that this analysis considers some arbitrary period of time containing user interactions
+    string runtime_analysis_window_timespan = 65;
+
+    // Descriptive label that this analysis considers a snapshot of the page at a single point in time
+    string runtime_analysis_window_snapshot = 66;
   }
 
   // The message holding all formatted strings used in the renderer.

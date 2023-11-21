@@ -3230,6 +3230,12 @@
   "report/renderer/report-utils.js | runtimeAnalysisWindow": {
     "message": "Initial page load"
   },
+  "report/renderer/report-utils.js | runtimeAnalysisWindowSnapshot": {
+    "message": "Point-in-time snapshot"
+  },
+  "report/renderer/report-utils.js | runtimeAnalysisWindowTimespan": {
+    "message": "User interactions timespan"
+  },
   "report/renderer/report-utils.js | runtimeCustom": {
     "message": "Custom throttling"
   },
@@ -3264,10 +3270,10 @@
     "message": "User agent (network)"
   },
   "report/renderer/report-utils.js | runtimeSingleLoad": {
-    "message": "Single page load"
+    "message": "Single page session"
   },
   "report/renderer/report-utils.js | runtimeSingleLoadTooltip": {
-    "message": "This data is taken from a single page load, as opposed to field data summarizing many sessions."
+    "message": "This data is taken from a single page session, as opposed to field data summarizing many sessions."
   },
   "report/renderer/report-utils.js | runtimeSlow4g": {
     "message": "Slow 4G throttling"

@@ -61,9 +61,9 @@ const expectations = {
               {url: 'http://localhost:10503/simple-script.js', resourceType: 'Fetch'},
               {url: 'http://localhost:10200/simple-worker.js'},
               {url: 'http://localhost:10503/simple-worker.js'},
-              // Requests from worker targets
               {url: 'http://localhost:10200/simple-worker.mjs'},
               {url: 'http://localhost:10503/simple-worker.mjs'},
+              // Requests from worker targets
               {url: 'http://localhost:10200/simple-script.js?esm', resourceType: 'Script'},
               {url: 'http://localhost:10503/simple-script.js?esm', resourceType: 'Script'},
               {url: 'http://localhost:10200/simple-script.js?importScripts', resourceType: 'Other'},
@@ -100,11 +100,22 @@ const expectations = {
       },
     ],
     // Only `:10200/oopif-simple-page.html`'s inclusion of `simple-script.js` shows here.
-    // All other scripts are filtered out because of our "OOPIF" filter (including anything
-    // that is just in another process, like a worker).
+    // All other scripts are filtered out because of our "OOPIF" filter.
     ScriptElements: [
       {
         src: 'http://localhost:10200/simple-script.js',
+        source: 'network',
+      },
+      {
+        // Worker requests emitted on the worker's parent target since M121.
+        _minChromiumVersion: '121',
+        src: 'http://localhost:10200/simple-worker.mjs',
+        source: 'network',
+      },
+      {
+        // Worker requests emitted on the worker's parent target since M121.
+        _minChromiumVersion: '121',
+        src: 'http://localhost:10200/simple-worker.js',
         source: 'network',
       },
     ],

@@ -3230,6 +3230,12 @@
   "report/renderer/report-utils.js | runtimeAnalysisWindow": {
     "message": "Îńît́îál̂ ṕâǵê ĺôád̂"
   },
+  "report/renderer/report-utils.js | runtimeAnalysisWindowSnapshot": {
+    "message": "P̂óîńt̂-ín̂-t́îḿê śn̂áp̂śĥót̂"
+  },
+  "report/renderer/report-utils.js | runtimeAnalysisWindowTimespan": {
+    "message": "Ûśêŕ îńt̂ér̂áĉt́îón̂ś t̂ím̂éŝṕâń"
+  },
   "report/renderer/report-utils.js | runtimeCustom": {
     "message": "Ĉúŝt́ôḿ t̂h́r̂ót̂t́l̂ín̂ǵ"
   },
@@ -3264,10 +3270,10 @@
     "message": "Ûśêŕ âǵêńt̂ (ńêt́ŵór̂ḱ)"
   },
   "report/renderer/report-utils.js | runtimeSingleLoad": {
-    "message": "Ŝín̂ǵl̂é p̂áĝé l̂óâd́"
+    "message": "Ŝín̂ǵl̂é p̂áĝé ŝéŝśîón̂"
   },
   "report/renderer/report-utils.js | runtimeSingleLoadTooltip": {
-    "message": "T̂h́îś d̂át̂á îś t̂ák̂én̂ f́r̂óm̂ á ŝín̂ǵl̂é p̂áĝé l̂óâd́, âś ôṕp̂óŝéd̂ t́ô f́îél̂d́ d̂át̂á ŝúm̂ḿâŕîźîńĝ ḿâńŷ śêśŝíôńŝ."
+    "message": "T̂h́îś d̂át̂á îś t̂ák̂én̂ f́r̂óm̂ á ŝín̂ǵl̂é p̂áĝé ŝéŝśîón̂, áŝ óp̂ṕôśêd́ t̂ó f̂íêĺd̂ d́ât́â śûḿm̂ár̂íẑín̂ǵ m̂án̂ý ŝéŝśîón̂ś."
   },
   "report/renderer/report-utils.js | runtimeSlow4g": {
     "message": "Ŝĺôẃ 4Ĝ t́ĥŕôt́t̂ĺîńĝ"

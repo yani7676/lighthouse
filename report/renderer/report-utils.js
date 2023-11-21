@@ -444,12 +444,16 @@ const UIStrings = {
   runtimeDesktopEmulation: 'Emulated Desktop',
   /** Descriptive explanation for a runtime setting that is set to an unknown value. */
   runtimeUnknown: 'Unknown',
-  /** Descriptive label that this analysis run was from a single pageload of a browser (not a summary of hundreds of loads) */
-  runtimeSingleLoad: 'Single page load',
+  /** Descriptive label that this analysis run was from a single sample of a page session (not a summary of hundreds of loads) */
+  runtimeSingleLoad: 'Single page session',
   /** Descriptive label that this analysis only considers the initial load of the page, and no interaction beyond when the page had "fully loaded" */
   runtimeAnalysisWindow: 'Initial page load',
-  /** Descriptive explanation that this analysis run was from a single pageload of a browser, whereas field data often summarizes hundreds+ of page loads */
-  runtimeSingleLoadTooltip: 'This data is taken from a single page load, as opposed to field data summarizing many sessions.', // eslint-disable-line max-len
+  /** Descriptive label that this analysis considers some arbitrary period of time containing user interactions */
+  runtimeAnalysisWindowTimespan: 'User interactions timespan',
+  /** Descriptive label that this analysis considers a snapshot of the page at a single point in time */
+  runtimeAnalysisWindowSnapshot: 'Point-in-time snapshot',
+  /** Descriptive explanation that this analysis run was from a single sample of a page session, whereas field data often summarizes hundreds+ of page loads */
+  runtimeSingleLoadTooltip: 'This data is taken from a single page session, as opposed to field data summarizing many sessions.', // eslint-disable-line max-len
 
   /** Descriptive explanation for environment throttling that was provided by the runtime environment instead of provided by Lighthouse throttling. */
   throttlingProvided: 'Provided by environment',

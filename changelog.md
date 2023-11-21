@@ -1,3 +1,61 @@
+<a name="11.3.0"></a>
+# 11.3.0 (2023-11-02)
+[Full Changelog](https://github.com/GoogleChrome/lighthouse/compare/v11.2.0...v11.3.0)
+
+We expect this release to ship in the DevTools of [Chrome 121](https://chromiumdash.appspot.com/schedule), and to PageSpeed Insights within 2 weeks.
+
+## New Contributors
+
+Thanks to our new contributors 👽🐷🐰🐯🐻!
+
+- Max Coplan @vegerot
+- Barry Pollard @tunetheweb
+
+## Notable Changes
+
+* core: add `clearStorageTypes` option ([#15508](https://github.com/GoogleChrome/lighthouse/pull/15508))
+* core: create flag to prevent fatal error on bad status code ([#15494](https://github.com/GoogleChrome/lighthouse/pull/15494))
+* clients(extension): add locale selector ([#15574](https://github.com/GoogleChrome/lighthouse/pull/15574))
+* clients(extension): always show settings, add psi frontend ([#15526](https://github.com/GoogleChrome/lighthouse/pull/15526))
+
+## Core
+
+* remove config navigations ([#15397](https://github.com/GoogleChrome/lighthouse/pull/15397))
+* accessibility: hide experimental axe rules ([#15543](https://github.com/GoogleChrome/lighthouse/pull/15543))
+* inspector-issues: add cookie deprecation issue ([#15553](https://github.com/GoogleChrome/lighthouse/pull/15553))
+
+## Report
+
+* use normal gauge if performance score is null ([#15554](https://github.com/GoogleChrome/lighthouse/pull/15554))
+
+## Deps
+
+* upgrade puppeteer to 21.5.0 ([#15582](https://github.com/GoogleChrome/lighthouse/pull/15582))
+* upgrade `lighthouse-stack-packs` to 1.12.1 ([#15566](https://github.com/GoogleChrome/lighthouse/pull/15566))
+* upgrade puppeteer to 21.4.0 ([#15557](https://github.com/GoogleChrome/lighthouse/pull/15557))
+
+## Clients
+
+* devtools: default to ignore fatal errors ([#15558](https://github.com/GoogleChrome/lighthouse/pull/15558))
+
+## I18n
+
+* import ([#15579](https://github.com/GoogleChrome/lighthouse/pull/15579))
+
+## Docs
+
+* plugins: add link to GitHub repo template ([#15539](https://github.com/GoogleChrome/lighthouse/pull/15539))
+
+## Tests
+
+* use --headless=new for all smoketests ([#14419](https://github.com/GoogleChrome/lighthouse/pull/14419))
+* devtools: extend protocol timeout for load ([#15555](https://github.com/GoogleChrome/lighthouse/pull/15555))
+* devtools: sync e2e ([#15550](https://github.com/GoogleChrome/lighthouse/pull/15550))
+
+## Misc
+
+* update web.dev URLs ([#15534](https://github.com/GoogleChrome/lighthouse/pull/15534))
+
 <a name="11.2.0"></a>
 # 11.2.0 (2023-10-09)
 [Full Changelog](https://github.com/GoogleChrome/lighthouse/compare/v11.1.0...v11.2.0)

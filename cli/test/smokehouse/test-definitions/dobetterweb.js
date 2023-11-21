@@ -377,6 +377,17 @@ const expectations = {
               },
               subItems: undefined,
             },
+            {
+              _minChromiumVersion: '121',
+              value: 'UnloadHandler',
+              source: {
+                type: 'source-location',
+                url: 'http://localhost:10200/dobetterweb/dbw_tester.html',
+                urlProvider: 'network',
+                line: '>0',
+                column: 9,
+              },
+            },
           ],
         },
       },
