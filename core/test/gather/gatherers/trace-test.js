@@ -23,6 +23,8 @@ describe('TraceGatherer', () => {
   describe('startSensitiveInstrumentation', () => {
     beforeEach(() => {
       context.driver.defaultSession.sendCommand
+        .mockResponse('DOM.enable')
+        .mockResponse('CSS.enable')
         .mockResponse('Page.enable')
         .mockResponse('Tracing.start');
     });
@@ -70,14 +72,25 @@ describe('TraceGatherer', () => {
         gatherer.stopSensitiveInstrumentation(context.asContext())
       );
 
+      /** @param {number} data */
+      const makeTraceEvent = (data) => ({name: 'fake', data});
+
       const dataListener = session.on.findListener('Tracing.dataCollected');
       const completeListener = session.once.findListener('Tracing.tracingComplete');
 
-      dataListener({value: [1, 2, 3]});
+      dataListener({value: [
+        makeTraceEvent(1),
+        makeTraceEvent(2),
+        makeTraceEvent(3),
+      ]});
       await flushAllTimersAndMicrotasks();
       expect(stopPromise).not.toBeDone();
 
-      dataListener({value: [4, 5, 6]});
+      dataListener({value: [
+        makeTraceEvent(4),
+        makeTraceEvent(5),
+        makeTraceEvent(6),
+      ]});
       await flushAllTimersAndMicrotasks();
       expect(stopPromise).not.toBeDone();
 
@@ -87,7 +100,14 @@ describe('TraceGatherer', () => {
       expect(session.off).toHaveBeenCalled();
 
       await stopPromise;
-      expect(await gatherer.getArtifact()).toEqual({traceEvents: [1, 2, 3, 4, 5, 6]});
+      expect(await gatherer.getArtifact()).toEqual({traceEvents: [
+        makeTraceEvent(1),
+        makeTraceEvent(2),
+        makeTraceEvent(3),
+        makeTraceEvent(4),
+        makeTraceEvent(5),
+        makeTraceEvent(6),
+      ]});
     });
   });
 });

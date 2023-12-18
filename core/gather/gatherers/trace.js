@@ -12,9 +12,7 @@
 
 import BaseGatherer from '../base-gatherer.js';
 import {TraceProcessor} from '../../lib/tracehouse/trace-processor.js';
-
-// import * as TraceEngine from '@paulirish/trace_engine';
-import * as TraceEngine from './tmp-trace-engine/trace-engine.js';
+import * as TraceEngine from '../../lib/trace-engine.js';
 
 class Trace extends BaseGatherer {
   /** @type {LH.Trace} */
@@ -137,42 +135,53 @@ class Trace extends BaseGatherer {
    */
   static async runTraceEngine(driver, trace) {
     const protocolInterface = {
+      /** @param {string} url */
+      // eslint-disable-next-line no-unused-vars
       getInitiatorForRequest(url) {
         return null;
       },
+      /** @param {number[]} backendNodeIds */
       async pushNodesByBackendIdsToFrontend(backendNodeIds) {
         await driver.defaultSession.sendCommand('DOM.getDocument', {depth: -1, pierce: true});
-        const response = await driver.defaultSession.sendCommand('DOM.pushNodesByBackendIdsToFrontend', {backendNodeIds});
+        const response = await driver.defaultSession.sendCommand(
+          'DOM.pushNodesByBackendIdsToFrontend', {backendNodeIds});
         return response.nodeIds;
       },
+      /** @param {number} nodeId */
       async getNode(nodeId) {
         const response = await driver.defaultSession.sendCommand('DOM.describeNode', {nodeId});
         // Why is this always zero? Uh, let's fix it here.
         response.node.nodeId = nodeId;
         return response.node;
       },
+      /** @param {number} nodeId */
       async getComputedStyleForNode(nodeId) {
         try {
-          const response = await driver.defaultSession.sendCommand('CSS.getComputedStyleForNode', {nodeId});
+          const response = await driver.defaultSession.sendCommand(
+            'CSS.getComputedStyleForNode', {nodeId});
           return response.computedStyle;
         } catch {
           return [];
         }
       },
+      /** @param {number} nodeId */
       async getMatchedStylesForNode(nodeId) {
         try {
-          const response = await driver.defaultSession.sendCommand('CSS.getMatchedStylesForNode', {nodeId});
+          const response = await driver.defaultSession.sendCommand(
+            'CSS.getMatchedStylesForNode', {nodeId});
           return response;
         } catch {
           return [];
         }
       },
+      /** @param {string} url */
+      // eslint-disable-next-line no-unused-vars
       async fontFaceForSource(url) {
         return null;
       },
     };
 
-    const engine = TraceEngine.Processor.TraceProcessor.createWithAllHandlers();
+    const engine = TraceEngine.TraceProcessor.createWithAllHandlers();
     await engine.parse(trace.traceEvents);
     const data = engine.data;
 
@@ -181,9 +190,10 @@ class Trace extends BaseGatherer {
     const rootCauses = {
       layoutShifts: new Map(),
     };
+    const rootCausesEngine = new TraceEngine.RootCauses(protocolInterface);
     for (const cluster of data.LayoutShifts.clusters) {
       for (const event of cluster.events) {
-        const r = await TraceEngine.RootCauses.LayoutShift.rootCausesForEvent(protocolInterface, data, event);
+        const r = await rootCausesEngine.layoutShifts.rootCausesForEvent(data, event);
         rootCauses.layoutShifts.set(event, r);
       }
     }

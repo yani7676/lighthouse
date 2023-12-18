@@ -4,14 +4,10 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import * as TraceEngine from '@paulirish/trace_engine';
-// import * as TraceEngine from './tmp-trace-engine/trace-engine.js';
-// does polyfillDOMRect
-import '@paulirish/trace_engine/analyze-trace.mjs';
-
 import {makeComputedArtifact} from '../computed-artifact.js';
 import {ProcessedTrace} from '../processed-trace.js';
 import * as RectHelpers from '../../lib/rect-helpers.js';
+import * as TraceEngine from '../../lib/trace-engine.js';
 
 /** @typedef {{ts: number, isMainFrame: boolean, weightedScore: number, impactedNodes?: LH.Artifacts.TraceImpactedNode[], event: LH.TraceEvent}} LayoutShiftEvent */
 
@@ -172,31 +168,31 @@ class CumulativeLayoutShift {
       useNewTraceEngine = false;
     }
 
-    let cumulativeLayoutShift, cumulativeLayoutShiftMainFrame;
+    let cumulativeLayoutShift; let cumulativeLayoutShiftMainFrame;
     if (useNewTraceEngine) {
       /** @param {LH.TraceEvent[]} events */
-      async function run(events) {
-        const processor = new TraceEngine.Processor.TraceProcessor({
-          LayoutShifts: TraceEngine.Handlers.ModelHandlers.LayoutShifts,
-          Screenshots: TraceEngine.Handlers.ModelHandlers.Screenshots,
+      const run = async (events) => {
+        const processor = new TraceEngine.TraceProcessor({
+          LayoutShifts: TraceEngine.TraceHandlers.LayoutShifts,
+          Screenshots: TraceEngine.TraceHandlers.Screenshots,
         });
         await processor.parse(events);
         return processor.data.LayoutShifts.sessionMaxScore;
-      }
+      };
 
       try {
         cumulativeLayoutShift = await run(processedTrace.frameTreeEvents.filter(event => {
           if (event.name !== 'LayoutShift') {
             return true;
           }
-  
+
           return allFrameShiftEvents.some(lse => lse.event === event);
         }));
         cumulativeLayoutShiftMainFrame = await run(processedTrace.frameTreeEvents.filter(event => {
           if (event.name !== 'LayoutShift') {
             return true;
           }
-  
+
           return mainFrameShiftEvents.some(lse => lse.event === event);
         }));
       } catch (e) {
