@@ -14,7 +14,7 @@ const KB = 1024;
 const resourceType = 'Script';
 describe('Page uses optimized responses', () => {
   it('fails when given unminified scripts', () => {
-    const responseHeaders = [{name: 'Content-Encoding'}];
+    const responseHeaders = [{name: 'Content-Encoding', value: 'gzip'}];
     const commonRecord = {resourceType, responseHeaders};
     const auditResult = UnminifiedJavascriptAudit.audit_({
       URL: {finalDisplayedUrl: 'https://www.example.com'},

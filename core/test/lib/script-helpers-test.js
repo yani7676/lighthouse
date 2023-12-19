@@ -46,7 +46,7 @@ describe('Script helpers', () => {
 
   describe('#estimateCompressedContentSize', () => {
     const estimate = estimateCompressedContentSize;
-    const encoding = [{name: 'Content-Encoding'}];
+    const encoding = [{name: 'Content-Encoding', value: 'gzip'}];
 
     it('should estimate by resource type compression ratio when no network info available', () => {
       assert.equal(estimate(undefined, 1000, 'Stylesheet'), 200);

@@ -616,8 +616,16 @@ class NetworkRequest {
   static isContentEncoded(record) {
     // FYI: older devtools logs (like our test fixtures) seems to be lower case, while modern logs
     // are Cased-Like-This.
-    const pattern = /^content-encoding$/i;
-    return record.responseHeaders.some(item => item.name.match(pattern));
+    const patterns = global.isLightrider ? [
+      /^x-original-content-encoding$/i,
+    ] : [
+      /^content-encoding$/i,
+      /^x-content-encoding-over-network$/i,
+    ];
+    const compressionTypes = ['gzip', 'br', 'deflate'];
+    return record.responseHeaders.some(header =>
+      patterns.some(p => header.name.match(p)) && compressionTypes.includes(header.value)
+    );
   }
 
   /**

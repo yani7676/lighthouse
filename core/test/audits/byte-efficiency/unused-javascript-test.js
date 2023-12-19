@@ -30,7 +30,9 @@ function getScriptId(url) {
  * @param {LH.Crdp.Network.ResourceType} resourceType
  */
 function generateRecord(url, transferSize, resourceType) {
-  return {url, transferSize, resourceType, responseHeaders: [{name: 'Content-Encoding'}]};
+  return {url, transferSize, resourceType, responseHeaders: [
+    {name: 'Content-Encoding', value: 'gzip'},
+  ]};
 }
 
 /**
