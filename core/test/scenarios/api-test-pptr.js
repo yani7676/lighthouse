@@ -286,7 +286,7 @@ Array [
       expect(Number.isFinite(lhr.audits['first-contentful-paint'].numericValue)).toBe(true);
     });
 
-    it.only('should compute results with callback requestor', async () => {
+    it('should compute results with callback requestor', async () => {
       console.log(JSON.stringify(api.defaultConfig.audits, null, 2));
       const {page, serverBaseUrl} = state;
       const requestedUrl = `${serverBaseUrl}/?redirect=/index.html`;
