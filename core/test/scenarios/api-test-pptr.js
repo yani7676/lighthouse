@@ -289,7 +289,7 @@ Array [
       expect(Number.isFinite(lhr.audits['first-contentful-paint'].numericValue)).toBe(true);
     });
 
-    it.only('should compute results with callback requestor', async () => {
+    it('should compute results with callback requestor', async () => {
       const {page, serverBaseUrl} = state;
       const requestedUrl = `${serverBaseUrl}/?redirect=/index.html`;
       const mainDocumentUrl = `${serverBaseUrl}/index.html`;
