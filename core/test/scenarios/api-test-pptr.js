@@ -287,7 +287,6 @@ Array [
     });
 
     it('should compute results with callback requestor', async () => {
-      console.log(JSON.stringify(api.defaultConfig.audits, null, 2));
       const {page, serverBaseUrl} = state;
       const requestedUrl = `${serverBaseUrl}/?redirect=/index.html`;
       const mainDocumentUrl = `${serverBaseUrl}/index.html`;
@@ -313,6 +312,7 @@ Array [
       });
 
       const {auditResults, failedAudits, erroredAudits} = getAuditsBreakdown(lhr);
+      console.log(auditResults.map(a => a.id).includes('layout-shifts'));
       expect(auditResults.map(audit => audit.id).sort()).toMatchSnapshot();
       expect(erroredAudits).toHaveLength(0);
 
