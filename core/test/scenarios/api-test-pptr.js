@@ -4,12 +4,15 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+import fs from 'fs';
+
 import jestMock from 'jest-mock';
 
 import * as api from '../../index.js';
 import {createTestState, getAuditsBreakdown} from './pptr-test-utils.js';
 import {LH_ROOT} from '../../../shared/root.js';
 import {TargetManager} from '../../gather/driver/target-manager.js';
+import {fileURLToPath} from 'url';
 
 describe('Individual modes API', function() {
   // eslint-disable-next-line no-invalid-this
@@ -286,7 +289,7 @@ Array [
       expect(Number.isFinite(lhr.audits['first-contentful-paint'].numericValue)).toBe(true);
     });
 
-    it('should compute results with callback requestor', async () => {
+    it.only('should compute results with callback requestor', async () => {
       const {page, serverBaseUrl} = state;
       const requestedUrl = `${serverBaseUrl}/?redirect=/index.html`;
       const mainDocumentUrl = `${serverBaseUrl}/index.html`;
@@ -312,6 +315,9 @@ Array [
       });
 
       const {auditResults, failedAudits, erroredAudits} = getAuditsBreakdown(lhr);
+      const __dirname = fileURLToPath(new URL('.', import.meta.url));
+      const file = fs.readFileSync(`${__dirname}/__snapshots__/api-test-pptr.js.snap`, 'utf-8');
+      console.log(Array.from(file.matchAll(/layout-shifts/g)).length);
       console.log(auditResults.map(a => a.id).includes('layout-shifts'));
       expect(auditResults.map(audit => audit.id).sort()).toMatchSnapshot();
       expect(erroredAudits).toHaveLength(0);
