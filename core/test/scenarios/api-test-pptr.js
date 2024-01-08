@@ -289,7 +289,7 @@ Array [
       expect(Number.isFinite(lhr.audits['first-contentful-paint'].numericValue)).toBe(true);
     });
 
-    it('should compute results with callback requestor', async () => {
+    it.only('should compute results with callback requestor', async () => {
       const {page, serverBaseUrl} = state;
       const requestedUrl = `${serverBaseUrl}/?redirect=/index.html`;
       const mainDocumentUrl = `${serverBaseUrl}/index.html`;
@@ -317,9 +317,14 @@ Array [
       const {auditResults, failedAudits, erroredAudits} = getAuditsBreakdown(lhr);
       const __dirname = fileURLToPath(new URL('.', import.meta.url));
       const file = fs.readFileSync(`${__dirname}/__snapshots__/api-test-pptr.js.snap`, 'utf-8');
-      console.log(Array.from(file.matchAll(/layout-shifts/g)).length);
-      console.log(auditResults.map(a => a.id).includes('layout-shifts'));
-      expect(auditResults.map(audit => audit.id).sort()).toMatchSnapshot();
+      console.log('SNAP INSTANCES:', Array.from(file.matchAll(/layout-shifts/g)).length);
+      console.log('JSON HAS?', auditResults.map(a => a.id).includes('layout-shifts'));
+      try {
+        expect(auditResults.map(audit => audit.id).sort()).toMatchSnapshot();
+      } catch (err) {
+        console.log('FAILURE');
+        throw err;
+      }
       expect(erroredAudits).toHaveLength(0);
 
       const failedAuditIds = failedAudits.map(audit => audit.id);

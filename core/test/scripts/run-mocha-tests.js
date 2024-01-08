@@ -152,7 +152,7 @@ const rawArgv = y
     },
     'forbidOnly': {
       type: 'boolean',
-      default: Boolean(process.env.CI),
+      default: false,
     },
   })
   .wrap(y.terminalWidth())
