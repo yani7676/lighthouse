@@ -323,6 +323,7 @@ Array [
         expect(auditResults.map(audit => audit.id).sort()).toMatchSnapshot();
       } catch (err) {
         console.log('FAILURE');
+        console.log(err);
         throw err;
       }
       expect(erroredAudits).toHaveLength(0);
