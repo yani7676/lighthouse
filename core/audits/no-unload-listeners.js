@@ -29,7 +29,7 @@ class NoUnloadListeners extends Audit {
       title: str_(UIStrings.title),
       failureTitle: str_(UIStrings.failureTitle),
       description: str_(UIStrings.description),
-      requiredArtifacts: ['GlobalListeners', 'SourceMaps', 'Scripts'],
+      requiredArtifacts: ['InspectorIssues', 'SourceMaps', 'Scripts'],
     };
   }
 
@@ -39,8 +39,9 @@ class NoUnloadListeners extends Audit {
    * @return {Promise<LH.Audit.Product>}
    */
   static async audit(artifacts, context) {
-    const unloadListeners = artifacts.GlobalListeners.filter(l => l.type === 'unload');
-    if (!unloadListeners.length) {
+    const unloadListenerIssues = artifacts.InspectorIssues.deprecationIssue
+      .filter(issue => issue.type === 'UnloadHandler');
+    if (!unloadListenerIssues.length) {
       return {
         score: 1,
       };
@@ -54,9 +55,9 @@ class NoUnloadListeners extends Audit {
     ];
 
     /** @type {Array<{source: LH.Audit.Details.ItemValue}>} */
-    const tableItems = unloadListeners.map(listener => {
-      const {lineNumber, columnNumber} = listener;
-      const script = artifacts.Scripts.find(s => s.scriptId === listener.scriptId);
+    const tableItems = unloadListenerIssues.map(issue => {
+      const {lineNumber, columnNumber, scriptId} = issue.sourceCodeLocation;
+      const script = artifacts.Scripts.find(s => s.scriptId === scriptId);
 
       // If we can't find a url, still show something so the user can manually
       // look for where an `unload` handler is being created.
