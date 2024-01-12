@@ -18,9 +18,11 @@ const testScripts = [
 ].map(createScript);
 
 describe('No Unload Listeners', () => {
-  it('passes when there were no listeners', async () => {
+  it('passes when there were no deprecation issues', async () => {
     const artifacts = {
-      GlobalListeners: [],
+      InspectorIssues: {
+        deprecationIssue: [],
+      },
       SourceMaps: [],
       Scripts: testScripts,
     };
@@ -29,12 +31,19 @@ describe('No Unload Listeners', () => {
     expect(result).toEqual({score: 1});
   });
 
-  it('passes when there were no `unload` listeners', async () => {
-    const GlobalListeners = [{
-      type: 'DOMContentLoaded', scriptId: '12', lineNumber: 5, columnNumber: 0,
-    }];
+  it('passes when there were no `UnloadHandler` deprecation issues', async () => {
+    const InspectorIssues = {
+      deprecationIssue: [{
+        type: 'SomeDeprecation',
+        sourceCodeLocation: {
+          scriptId: '12',
+          lineNumber: 5,
+          columnNumber: 0,
+        },
+      }],
+    };
     const artifacts = {
-      GlobalListeners,
+      InspectorIssues,
       SourceMaps: [],
       Scripts: testScripts,
     };
@@ -44,12 +53,28 @@ describe('No Unload Listeners', () => {
   });
 
   it('fails when there are unload listeners and matches them to script locations', async () => {
-    const GlobalListeners = [
-      {type: 'unload', scriptId: '16', lineNumber: 10, columnNumber: 30},
-      {type: 'unload', scriptId: '23', lineNumber: 0, columnNumber: 0},
-    ];
+    const InspectorIssues = {
+      deprecationIssue: [
+        {
+          type: 'UnloadHandler',
+          sourceCodeLocation: {
+            scriptId: '16',
+            lineNumber: 10,
+            columnNumber: 30,
+          },
+        },
+        {
+          type: 'UnloadHandler',
+          sourceCodeLocation: {
+            scriptId: '23',
+            lineNumber: 0,
+            columnNumber: 0,
+          },
+        },
+      ],
+    };
     const artifacts = {
-      GlobalListeners,
+      InspectorIssues,
       SourceMaps: [],
       Scripts: testScripts,
     };
@@ -67,13 +92,28 @@ describe('No Unload Listeners', () => {
 
   // eslint-disable-next-line max-len
   it('fails when there are unload listeners and has a fallback if script URL is not found', async () => {
-    const GlobalListeners = [
-      {type: 'DOMContentLoaded', scriptId: '12', lineNumber: 5, columnNumber: 0},
-      {type: 'unload', scriptId: 'notascriptid', lineNumber: 10, columnNumber: 30},
-      {type: 'unload', scriptId: '22', lineNumber: 1, columnNumber: 100},
-    ];
+    const InspectorIssues = {
+      deprecationIssue: [
+        {
+          type: 'UnloadHandler',
+          sourceCodeLocation: {
+            scriptId: 'noscriptid',
+            lineNumber: 10,
+            columnNumber: 30,
+          },
+        },
+        {
+          type: 'UnloadHandler',
+          sourceCodeLocation: {
+            scriptId: '23',
+            lineNumber: 1,
+            columnNumber: 100,
+          },
+        },
+      ],
+    };
     const artifacts = {
-      GlobalListeners,
+      InspectorIssues,
       SourceMaps: [],
       Scripts: testScripts,
     };
