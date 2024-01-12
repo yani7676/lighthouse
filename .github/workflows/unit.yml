@@ -18,7 +18,7 @@ jobs:
     runs-on: ubuntu-latest
     name: node ${{ matrix.node }}
     env:
-      CHROME_PATH: ${{ github.workspace }}/lighthouse/.tmp/chrome-tot/chrome
+      CHROME_PATH: ${{ github.workspace }}/.tmp/chrome-tot/chrome
       LATEST_NODE: '18'
       FORCE_COLOR: true
 

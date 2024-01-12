@@ -13,6 +13,7 @@ jobs:
   basics:
     runs-on: ubuntu-latest
     env:
+      CHROME_PATH: ${{ github.workspace }}/.tmp/chrome-tot/chrome
       FORCE_COLOR: true
 
     # A few steps are duplicated across all jobs. Can be done better when this feature lands:
@@ -25,7 +26,6 @@ jobs:
         fetch-depth: 100
     - run: bash core/scripts/github-actions-commit-range.sh
       env:
-        CHROME_PATH: ${{ github.workspace }}/lighthouse/.tmp/chrome-tot/chrome
         GITHUB_CONTEXT_PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
         GITHUB_CONTEXT_BASE_SHA: ${{ github.event.before }}
 

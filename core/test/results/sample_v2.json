@@ -6237,10 +6237,6 @@
           "weight": 0
         },
         {
-          "id": "layout-shift-elements",
-          "weight": 0
-        },
-        {
           "id": "layout-shifts",
           "weight": 0
         },
@@ -6329,6 +6325,11 @@
         },
         {
           "id": "resource-summary",
+          "weight": 0,
+          "group": "hidden"
+        },
+        {
+          "id": "layout-shift-elements",
           "weight": 0,
           "group": "hidden"
         }
@@ -9467,6 +9468,7 @@
       "opportunityResourceColumnLabel": "Opportunity",
       "opportunitySavingsColumnLabel": "Estimated Savings",
       "passedAuditsGroupTitle": "Passed audits",
+      "pwaRemovalMessage": "Alongside [Chrome’s updated Installability Criteria](https://developer.chrome.com/blog/update-install-criteria), Lighthouse will be deprecating the PWA category in a future release. Please refer to the [updated PWA documentation](https://developer.chrome.com/docs/devtools/progressive-web-apps/) for future PWA testing.",
       "runtimeAnalysisWindow": "Initial page load",
       "runtimeAnalysisWindowSnapshot": "Point-in-time snapshot",
       "runtimeAnalysisWindowTimespan": "User interactions timespan",

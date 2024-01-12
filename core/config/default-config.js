@@ -478,7 +478,6 @@ const defaultConfig = {
         {id: 'third-party-facades', weight: 0},
         {id: 'largest-contentful-paint-element', weight: 0},
         {id: 'lcp-lazy-loaded', weight: 0},
-        {id: 'layout-shift-elements', weight: 0},
         {id: 'layout-shifts', weight: 0},
         {id: 'uses-passive-event-listeners', weight: 0},
         {id: 'no-document-write', weight: 0},
@@ -505,6 +504,7 @@ const defaultConfig = {
         {id: 'final-screenshot', weight: 0, group: 'hidden'},
         {id: 'script-treemap-data', weight: 0, group: 'hidden'},
         {id: 'resource-summary', weight: 0, group: 'hidden'},
+        {id: 'layout-shift-elements', weight: 0, group: 'hidden'},
       ],
     },
     'accessibility': {

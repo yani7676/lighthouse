@@ -668,6 +668,9 @@ message I18n {
 
     // Descriptive label that this analysis considers a snapshot of the page at a single point in time
     string runtime_analysis_window_snapshot = 66;
+
+    // Message for PWA deprecation.
+    string pwa_removal_message = 67;
   }
 
   // The message holding all formatted strings used in the renderer.
