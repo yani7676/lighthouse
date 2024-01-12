@@ -1906,20 +1906,6 @@
     "failingTextLength": 131,
     "totalTextLength": 493
   },
-  "GlobalListeners": [
-    {
-      "type": "visibilitychange",
-      "scriptId": "16",
-      "lineNumber": 0,
-      "columnNumber": 12733
-    },
-    {
-      "type": "pagehide",
-      "scriptId": "16",
-      "lineNumber": 0,
-      "columnNumber": 12485
-    }
-  ],
   "ImageElements": [
     {
       "src": "https://www.mikescerealshack.co/logo-text.svg",
@@ -2019,8 +2005,10 @@
   "InspectorIssues": {
     "attributionReportingIssue": [],
     "blockedByResponseIssue": [],
+    "bounceTrackingIssue": [],
     "clientHintIssue": [],
     "contentSecurityPolicyIssue": [],
+    "cookieDeprecationMetadataIssue": [],
     "corsIssue": [],
     "deprecationIssue": [],
     "federatedAuthRequestIssue": [],
@@ -2029,9 +2017,12 @@
     "lowTextContrastIssue": [],
     "mixedContentIssue": [],
     "navigatorUserAgentIssue": [],
+    "propertyRuleIssue": [],
     "quirksModeIssue": [],
     "cookieIssue": [],
-    "sharedArrayBufferIssue": []
+    "sharedArrayBufferIssue": [],
+    "stylesheetLoadingIssue": [],
+    "federatedAuthUserInfoRequestIssue": []
   },
   "JsUsage": {
     "8": {

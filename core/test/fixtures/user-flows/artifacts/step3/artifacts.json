@@ -1949,20 +1949,6 @@
     "failingTextLength": 161,
     "totalTextLength": 736
   },
-  "GlobalListeners": [
-    {
-      "type": "visibilitychange",
-      "scriptId": "107",
-      "lineNumber": 0,
-      "columnNumber": 12733
-    },
-    {
-      "type": "pagehide",
-      "scriptId": "107",
-      "lineNumber": 0,
-      "columnNumber": 12485
-    }
-  ],
   "ImageElements": [
     {
       "src": "https://www.mikescerealshack.co/oscar-actually.jpg",
@@ -2062,28 +2048,35 @@
   "InspectorIssues": {
     "attributionReportingIssue": [],
     "blockedByResponseIssue": [],
+    "bounceTrackingIssue": [],
     "clientHintIssue": [],
     "contentSecurityPolicyIssue": [],
+    "cookieDeprecationMetadataIssue": [],
     "corsIssue": [],
     "deprecationIssue": [],
     "federatedAuthRequestIssue": [],
-    "genericIssue": [],
+    "genericIssue": [
+      {
+        "errorType": "FormEmptyIdAndNameAttributesForInputError",
+        "violatingNodeId": 381,
+        "violatingNodeAttribute": ""
+      },
+      {
+        "errorType": "FormInputAssignedAutocompleteValueToIdOrNameAttributeError",
+        "violatingNodeId": 1106,
+        "violatingNodeAttribute": "name"
+      }
+    ],
     "heavyAdIssue": [],
     "lowTextContrastIssue": [],
     "mixedContentIssue": [],
-    "navigatorUserAgentIssue": [
-      {
-        "url": "https://www.mikescerealshack.co/",
-        "location": {
-          "url": "_lighthouse-eval.js",
-          "lineNumber": 0,
-          "columnNumber": 0
-        }
-      }
-    ],
+    "navigatorUserAgentIssue": [],
+    "propertyRuleIssue": [],
     "quirksModeIssue": [],
     "cookieIssue": [],
-    "sharedArrayBufferIssue": []
+    "sharedArrayBufferIssue": [],
+    "stylesheetLoadingIssue": [],
+    "federatedAuthUserInfoRequestIssue": []
   },
   "JsUsage": {
     "16": {
