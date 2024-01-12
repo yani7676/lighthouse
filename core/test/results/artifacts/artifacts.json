@@ -10918,14 +10918,6 @@
   "GatherContext": {
     "gatherMode": "navigation"
   },
-  "GlobalListeners": [
-    {
-      "type": "unload",
-      "scriptId": "23",
-      "lineNumber": 395,
-      "columnNumber": 36
-    }
-  ],
   "Doctype": {
     "name": "html",
     "publicId": "",
@@ -12003,56 +11995,79 @@
   "InspectorIssues": {
     "attributionReportingIssue": [],
     "blockedByResponseIssue": [],
+    "bounceTrackingIssue": [],
     "clientHintIssue": [],
     "contentSecurityPolicyIssue": [],
+    "cookieDeprecationMetadataIssue": [],
     "corsIssue": [],
     "deprecationIssue": [
       {
         "affectedFrame": {
-          "frameId": "24A14DFFDE5346A96956F4F977A4F84D"
-        },
-        "sourceCodeLocation": {
-          "scriptId": "11",
-          "url": "http://localhost:10200/dobetterweb/dbw_tester.js",
-          "lineNumber": 13,
-          "columnNumber": 10
-        },
-        "message": "'window.webkitStorageInfo' is deprecated. Please use 'navigator.webkitTemporaryStorage' or 'navigator.webkitPersistentStorage' instead.",
-        "deprecationType": "PrefixedStorageInfo"
-      },
-      {
-        "affectedFrame": {
-          "frameId": "24A14DFFDE5346A96956F4F977A4F84D"
+          "frameId": "D45D705B1FE80B2A2A340E0A82948713"
         },
         "sourceCodeLocation": {
           "scriptId": "23",
           "url": "http://localhost:10200/dobetterweb/dbw_tester.html",
-          "lineNumber": 369,
+          "lineNumber": 394,
           "columnNumber": 7
         },
-        "message": "Synchronous XMLHttpRequest on the main thread is deprecated because of its detrimental effects to the end user's experience. For more help, check https://xhr.spec.whatwg.org/.",
-        "deprecationType": "XMLHttpRequestSynchronousInNonWorkerOutsideBeforeUnload"
+        "type": "XMLHttpRequestSynchronousInNonWorkerOutsideBeforeUnload"
+      },
+      {
+        "affectedFrame": {
+          "frameId": "D45D705B1FE80B2A2A340E0A82948713"
+        },
+        "sourceCodeLocation": {
+          "scriptId": "23",
+          "url": "http://localhost:10200/dobetterweb/dbw_tester.html",
+          "lineNumber": 409,
+          "columnNumber": 10
+        },
+        "type": "UnloadHandler"
       }
     ],
     "federatedAuthRequestIssue": [],
-    "genericIssue": [],
+    "genericIssue": [
+      {
+        "errorType": "FormEmptyIdAndNameAttributesForInputError",
+        "violatingNodeId": 201,
+        "violatingNodeAttribute": ""
+      },
+      {
+        "errorType": "FormEmptyIdAndNameAttributesForInputError",
+        "violatingNodeId": 202,
+        "violatingNodeAttribute": ""
+      },
+      {
+        "errorType": "FormEmptyIdAndNameAttributesForInputError",
+        "violatingNodeId": 203,
+        "violatingNodeAttribute": ""
+      }
+    ],
     "heavyAdIssue": [],
     "lowTextContrastIssue": [],
     "mixedContentIssue": [],
-    "navigatorUserAgentIssue": [
+    "navigatorUserAgentIssue": [],
+    "propertyRuleIssue": [],
+    "quirksModeIssue": [],
+    "cookieIssue": [],
+    "sharedArrayBufferIssue": [],
+    "stylesheetLoadingIssue": [
       {
-        "url": "http://localhost:10200/dobetterweb/dbw_tester.html",
-        "location": {
-          "scriptId": "0",
-          "url": "http://localhost:10200/dobetterweb/third_party/aggressive-promise-polyfill.js",
-          "lineNumber": 0,
-          "columnNumber": 0
+        "sourceCodeLocation": {
+          "url": "http://localhost:10200/dobetterweb/dbw_tester.html",
+          "lineNumber": 33,
+          "columnNumber": 58
+        },
+        "styleSheetLoadingIssueReason": "RequestFailed",
+        "failedRequestInfo": {
+          "url": "http://localhost:10200/dobetterweb/unknown404.css?delay=200",
+          "failureMessage": "net::ERR_ABORTED",
+          "requestId": "83616.3"
         }
       }
     ],
-    "quirksModeIssue": [],
-    "cookieIssue": [],
-    "sharedArrayBufferIssue": []
+    "federatedAuthUserInfoRequestIssue": []
   },
   "SourceMaps": [],
   "FullPageScreenshot": {

@@ -1066,23 +1066,23 @@
         ],
         "items": [
           {
-            "value": "'window.webkitStorageInfo' is deprecated. Please use 'navigator.webkitTemporaryStorage' or 'navigator.webkitPersistentStorage' instead.",
-            "source": {
-              "type": "source-location",
-              "url": "http://localhost:10200/dobetterweb/dbw_tester.js",
-              "urlProvider": "network",
-              "line": 13,
-              "column": 9
-            }
-          },
-          {
-            "value": "Synchronous XMLHttpRequest on the main thread is deprecated because of its detrimental effects to the end user's experience. For more help, check https://xhr.spec.whatwg.org/.",
+            "value": "Synchronous `XMLHttpRequest` on the main thread is deprecated because of its detrimental effects to the end user's experience. For more help, check https://xhr.spec.whatwg.org/.",
             "source": {
               "type": "source-location",
               "url": "http://localhost:10200/dobetterweb/dbw_tester.html",
               "urlProvider": "network",
-              "line": 369,
+              "line": 394,
               "column": 6
+            }
+          },
+          {
+            "value": "UnloadHandler",
+            "source": {
+              "type": "source-location",
+              "url": "http://localhost:10200/dobetterweb/dbw_tester.html",
+              "urlProvider": "network",
+              "line": 409,
+              "column": 9
             }
           }
         ]
@@ -2740,8 +2740,8 @@
               "type": "source-location",
               "url": "http://localhost:10200/dobetterweb/dbw_tester.html",
               "urlProvider": "network",
-              "line": 395,
-              "column": 36
+              "line": 409,
+              "column": 10
             }
           }
         ]
@@ -9852,6 +9852,9 @@
       ],
       "core/audits/deprecations.js | columnDeprecate": [
         "audits.deprecations.details.headings[0].label"
+      ],
+      "core/lib/deprecation-description.js | XMLHttpRequestSynchronousInNonWorkerOutsideBeforeUnload": [
+        "audits.deprecations.details.items[0].value"
       ],
       "core/audits/third-party-cookies.js | title": [
         "audits[third-party-cookies].title"
