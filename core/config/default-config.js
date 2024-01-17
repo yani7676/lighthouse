@@ -473,7 +473,6 @@ const defaultConfig = {
         {id: 'long-tasks', weight: 0},
         {id: 'non-composited-animations', weight: 0},
         {id: 'unsized-images', weight: 0},
-        {id: 'viewport', weight: 0},
         {id: 'uses-responsive-images-snapshot', weight: 0},
         {id: 'work-during-interaction', weight: 0},
         {id: 'bf-cache', weight: 0},
@@ -604,7 +603,6 @@ const defaultConfig = {
         {id: 'valid-source-maps', weight: 0, group: 'best-practices-general'},
         {id: 'inspector-issues', weight: 1, group: 'best-practices-general'},
         {id: 'themed-omnibox', weight: 1, group: 'best-practices-general'},
-        {id: 'viewport', weight: 2, group: 'best-practices-general'},
       ],
     },
     'seo': {
