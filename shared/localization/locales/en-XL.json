@@ -740,18 +740,6 @@
   "core/audits/byte-efficiency/uses-text-compression.js | title": {
     "message": "Êńâb́l̂é t̂éx̂t́ ĉóm̂ṕr̂éŝśîón̂"
   },
-  "core/audits/content-width.js | description": {
-    "message": "Îf́ t̂h́ê ẃîd́t̂h́ ôf́ ŷóûŕ âṕp̂'ś ĉón̂t́êńt̂ d́ôéŝń't̂ ḿât́ĉh́ t̂h́ê ẃîd́t̂h́ ôf́ t̂h́ê v́îéŵṕôŕt̂, ýôúr̂ áp̂ṕ m̂íĝh́t̂ ńôt́ b̂é ôṕt̂ím̂íẑéd̂ f́ôŕ m̂ób̂íl̂é ŝćr̂éêńŝ. [Ĺêár̂ń ĥóŵ t́ô śîźê ćôńt̂én̂t́ f̂ór̂ t́ĥé v̂íêẃp̂ór̂t́](https://developer.chrome.com/docs/lighthouse/pwa/content-width/)."
-  },
-  "core/audits/content-width.js | explanation": {
-    "message": "T̂h́ê v́îéŵṕôŕt̂ śîźê óf̂ {innerWidth}ṕx̂ d́ôéŝ ńôt́ m̂át̂ćĥ t́ĥé ŵín̂d́ôẃ ŝíẑé ôf́ {outerWidth}p̂x́."
-  },
-  "core/audits/content-width.js | failureTitle": {
-    "message": "Ĉón̂t́êńt̂ íŝ ńôt́ ŝíẑéd̂ ćôŕr̂éĉt́l̂ý f̂ór̂ t́ĥé v̂íêẃp̂ór̂t́"
-  },
-  "core/audits/content-width.js | title": {
-    "message": "Ĉón̂t́êńt̂ íŝ śîźêd́ ĉór̂ŕêćt̂ĺŷ f́ôŕ t̂h́ê v́îéŵṕôŕt̂"
-  },
   "core/audits/critical-request-chains.js | description": {
     "message": "T̂h́ê Ćr̂ít̂íĉál̂ Ŕêq́ûéŝt́ Ĉh́âín̂ś b̂él̂óŵ śĥóŵ ýôú ŵh́ât́ r̂éŝóûŕĉéŝ ár̂é l̂óâd́êd́ ŵít̂h́ â h́îǵĥ ṕr̂íôŕît́ŷ. Ćôńŝíd̂ér̂ ŕêd́ûćîńĝ t́ĥé l̂én̂ǵt̂h́ ôf́ ĉh́âín̂ś, r̂éd̂úĉín̂ǵ t̂h́ê d́ôẃn̂ĺôád̂ śîźê óf̂ ŕêśôúr̂ćêś, ôŕ d̂éf̂ér̂ŕîńĝ t́ĥé d̂óŵńl̂óâd́ ôf́ ûńn̂éĉéŝśâŕŷ ŕêśôúr̂ćêś t̂ó îḿp̂ŕôv́ê ṕâǵê ĺôád̂. [Ĺêár̂ń ĥóŵ t́ô áv̂óîd́ ĉh́âín̂ín̂ǵ ĉŕît́îćâĺ r̂éq̂úêśt̂ś](https://developer.chrome.com/docs/lighthouse/performance/critical-request-chains/)."
   },
@@ -1014,7 +1002,7 @@
     "message": "R̂éq̂úêśt̂ Ŕêśôĺût́îón̂"
   },
   "core/audits/is-on-https.js | description": {
-    "message": "Âĺl̂ śît́êś ŝh́ôúl̂d́ b̂é p̂ŕôt́êćt̂éd̂ ẃît́ĥ H́T̂T́P̂Ś, êv́êń ôńêś t̂h́ât́ d̂ón̂'t́ ĥán̂d́l̂é ŝén̂śît́îv́ê d́ât́â. T́ĥíŝ ín̂ćl̂úd̂éŝ áv̂óîd́îńĝ [ḿîx́êd́ ĉón̂t́êńt̂](https://developers.google.com/web/fundamentals/security/prevent-mixed-content/what-is-mixed-content), ẃĥér̂é ŝóm̂é r̂éŝóûŕĉéŝ ár̂é l̂óâd́êd́ ôv́êŕ ĤT́T̂Ṕ d̂éŝṕît́ê t́ĥé îńît́îál̂ ŕêq́ûéŝt́ b̂éîńĝ śêŕv̂éd̂ óv̂ér̂ H́T̂T́P̂Ś. ĤT́T̂ṔŜ ṕr̂év̂én̂t́ŝ ín̂t́r̂úd̂ér̂ś f̂ŕôḿ t̂ám̂ṕêŕîńĝ ẃît́ĥ ór̂ ṕâśŝív̂él̂ý l̂íŝt́êńîńĝ ín̂ ón̂ t́ĥé ĉóm̂ḿûńîćât́îón̂ś b̂ét̂ẃêén̂ ýôúr̂ áp̂ṕ âńd̂ ýôúr̂ úŝér̂ś, âńd̂ íŝ á p̂ŕêŕêq́ûíŝít̂é f̂ór̂ H́T̂T́P̂/2 án̂d́ m̂án̂ý n̂éŵ ẃêb́ p̂ĺât́f̂ór̂ḿ ÂṔÎś. [L̂éâŕn̂ ḿôŕê áb̂óût́ ĤT́T̂ṔŜ](https://developer.chrome.com/docs/lighthouse/pwa/is-on-https/)."
+    "message": "Âĺl̂ śît́êś ŝh́ôúl̂d́ b̂é p̂ŕôt́êćt̂éd̂ ẃît́ĥ H́T̂T́P̂Ś, êv́êń ôńêś t̂h́ât́ d̂ón̂'t́ ĥán̂d́l̂é ŝén̂śît́îv́ê d́ât́â. T́ĥíŝ ín̂ćl̂úd̂éŝ áv̂óîd́îńĝ [ḿîx́êd́ ĉón̂t́êńt̂](https://developers.google.com/web/fundamentals/security/prevent-mixed-content/what-is-mixed-content), ẃĥér̂é ŝóm̂é r̂éŝóûŕĉéŝ ár̂é l̂óâd́êd́ ôv́êŕ ĤT́T̂Ṕ d̂éŝṕît́ê t́ĥé îńît́îál̂ ŕêq́ûéŝt́ b̂éîńĝ śêŕv̂éd̂ óv̂ér̂ H́T̂T́P̂Ś. ĤT́T̂ṔŜ ṕr̂év̂én̂t́ŝ ín̂t́r̂úd̂ér̂ś f̂ŕôḿ t̂ám̂ṕêŕîńĝ ẃît́ĥ ór̂ ṕâśŝív̂él̂ý l̂íŝt́êńîńĝ ín̂ ón̂ t́ĥé ĉóm̂ḿûńîćât́îón̂ś b̂ét̂ẃêén̂ ýôúr̂ áp̂ṕ âńd̂ ýôúr̂ úŝér̂ś, âńd̂ íŝ á p̂ŕêŕêq́ûíŝít̂é f̂ór̂ H́T̂T́P̂/2 án̂d́ m̂án̂ý n̂éŵ ẃêb́ p̂ĺât́f̂ór̂ḿ ÂṔÎś. [L̂éâŕn̂ ḿôŕê áb̂óût́ ĤT́T̂ṔŜ](https://developer.chrome.com/docs/lighthouse/best-practices/is-on-https/)."
   },
   "core/audits/is-on-https.js | displayValue": {
     "message": "{itemCount, plural,\n    =1 {1 îńŝéĉúr̂é r̂éq̂úêśt̂ f́ôún̂d́}\n    other {# îńŝéĉúr̂é r̂éq̂úêśt̂ś f̂óûńd̂}\n    }"
@@ -1392,7 +1380,7 @@
     "message": "Îńît́îál̂ śêŕv̂ér̂ ŕêśp̂ón̂śê t́îḿê ẃâś ŝh́ôŕt̂"
   },
   "core/audits/themed-omnibox.js | description": {
-    "message": "T̂h́ê b́r̂óŵśêŕ âd́d̂ŕêśŝ b́âŕ ĉán̂ b́ê t́ĥém̂éd̂ t́ô ḿât́ĉh́ ŷóûŕ ŝít̂é. [L̂éâŕn̂ ḿôŕê áb̂óût́ t̂h́êḿîńĝ t́ĥé âd́d̂ŕêśŝ b́âŕ](https://developer.chrome.com/docs/lighthouse/pwa/themed-omnibox/)."
+    "message": "T̂h́ê b́r̂óŵśêŕ âd́d̂ŕêśŝ b́âŕ ĉán̂ b́ê t́ĥém̂éd̂ t́ô ḿât́ĉh́ ŷóûŕ ŝít̂é. [L̂éâŕn̂ ḿôŕê áb̂óût́ t̂h́êḿîńĝ t́ĥé âd́d̂ŕêśŝ b́âŕ](https://developer.chrome.com/docs/lighthouse/best-practices/themed-omnibox/)."
   },
   "core/audits/themed-omnibox.js | failureTitle": {
     "message": "D̂óêś n̂ót̂ śêt́ â t́ĥém̂é ĉól̂ór̂ f́ôŕ t̂h́ê ád̂d́r̂éŝś b̂ár̂."
@@ -1518,7 +1506,7 @@
     "message": "P̂áĝé ĥáŝ v́âĺîd́ ŝóûŕĉé m̂áp̂ś"
   },
   "core/audits/viewport.js | description": {
-    "message": "Â `<meta name=\"viewport\">` ńôt́ ôńl̂ý ôṕt̂ím̂íẑéŝ ýôúr̂ áp̂ṕ f̂ór̂ ḿôb́îĺê śĉŕêén̂ śîźêś, b̂út̂ ál̂śô ṕr̂év̂én̂t́ŝ [á 300 m̂íl̂ĺîśêćôńd̂ d́êĺâý t̂ó ûśêŕ îńp̂út̂](https://developer.chrome.com/blog/300ms-tap-delay-gone-away/). [Ĺêár̂ń m̂ór̂é âb́ôút̂ úŝín̂ǵ t̂h́ê v́îéŵṕôŕt̂ ḿêt́â t́âǵ](https://developer.chrome.com/docs/lighthouse/pwa/viewport/)."
+    "message": "Â `<meta name=\"viewport\">` ńôt́ ôńl̂ý ôṕt̂ím̂íẑéŝ ýôúr̂ áp̂ṕ f̂ór̂ ḿôb́îĺê śĉŕêén̂ śîźêś, b̂út̂ ál̂śô ṕr̂év̂én̂t́ŝ [á 300 m̂íl̂ĺîśêćôńd̂ d́êĺâý t̂ó ûśêŕ îńp̂út̂](https://developer.chrome.com/blog/300ms-tap-delay-gone-away/). [Ĺêár̂ń m̂ór̂é âb́ôút̂ úŝín̂ǵ t̂h́ê v́îéŵṕôŕt̂ ḿêt́â t́âǵ](https://developer.chrome.com/docs/lighthouse/seo/viewport/)."
   },
   "core/audits/viewport.js | explanationNoTag": {
     "message": "N̂ó `<meta name=\"viewport\">` t̂áĝ f́ôún̂d́"
