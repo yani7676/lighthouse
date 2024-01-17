@@ -3935,10 +3935,6 @@
                 "weight": 0
               },
               {
-                "id": "viewport",
-                "weight": 0
-              },
-              {
                 "id": "bf-cache",
                 "weight": 0
               },
@@ -4450,11 +4446,6 @@
               {
                 "id": "themed-omnibox",
                 "weight": 1,
-                "group": "best-practices-general"
-              },
-              {
-                "id": "viewport",
-                "weight": 2,
                 "group": "best-practices-general"
               }
             ],
@@ -14616,10 +14607,6 @@
                 "weight": 0
               },
               {
-                "id": "viewport",
-                "weight": 0
-              },
-              {
                 "id": "uses-responsive-images-snapshot",
                 "weight": 0
               }
@@ -15017,15 +15004,10 @@
                 "id": "js-libraries",
                 "weight": 0,
                 "group": "best-practices-general"
-              },
-              {
-                "id": "viewport",
-                "weight": 2,
-                "group": "best-practices-general"
               }
             ],
             "id": "best-practices",
-            "score": 0.88
+            "score": 0.83
           },
           "seo": {
             "title": "SEO",
@@ -21336,10 +21318,6 @@
                 "weight": 0
               },
               {
-                "id": "viewport",
-                "weight": 0
-              },
-              {
                 "id": "bf-cache",
                 "weight": 0
               },
@@ -21851,11 +21829,6 @@
               {
                 "id": "themed-omnibox",
                 "weight": 1,
-                "group": "best-practices-general"
-              },
-              {
-                "id": "viewport",
-                "weight": 2,
                 "group": "best-practices-general"
               }
             ],

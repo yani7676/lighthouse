@@ -6785,10 +6785,6 @@
           "weight": 0
         },
         {
-          "id": "viewport",
-          "weight": 0
-        },
-        {
           "id": "bf-cache",
           "weight": 0
         },
@@ -7301,15 +7297,10 @@
           "id": "themed-omnibox",
           "weight": 1,
           "group": "best-practices-general"
-        },
-        {
-          "id": "viewport",
-          "weight": 2,
-          "group": "best-practices-general"
         }
       ],
       "id": "best-practices",
-      "score": 0.4
+      "score": 0.35
     },
     "seo": {
       "title": "SEO",
