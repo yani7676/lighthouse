@@ -992,6 +992,7 @@ export interface TraceEvent {
       page?: string;
       readyState?: number;
       requestId?: string;
+      renderBlocking?: 'blocking'|'non_blocking'|'dynamically_injected_non_blocking'|'in_body_parser_blocking'|'potentially_blocking';
       startTime?: number;
       timeDeltas?: TraceCpuProfile['timeDeltas'];
       cpuProfile?: TraceCpuProfile;

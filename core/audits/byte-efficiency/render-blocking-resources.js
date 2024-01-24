@@ -14,15 +14,15 @@ import * as i18n from '../../lib/i18n/i18n.js';
 import {BaseNode} from '../../lib/dependency-graph/base-node.js';
 import {UnusedCSS} from '../../computed/unused-css.js';
 import {NetworkRequest} from '../../lib/network-request.js';
-import {ProcessedNavigation} from '../../computed/processed-navigation.js';
 import {LoadSimulator} from '../../computed/load-simulator.js';
 import {FirstContentfulPaint} from '../../computed/metrics/first-contentful-paint.js';
 import {LCPImageRecord} from '../../computed/lcp-image-record.js';
+import {ProcessedTrace} from '../../computed/processed-trace.js';
 
 
 /** @typedef {import('../../lib/dependency-graph/simulator/simulator').Simulator} Simulator */
 /** @typedef {import('../../lib/dependency-graph/base-node.js').Node} Node */
-/** @typedef {import('../../lib/dependency-graph/network-node.js')} NetworkNode */
+/** @typedef {import('../../lib/dependency-graph/network-node.js').NetworkNode} NetworkNode */
 
 // Because of the way we detect blocking stylesheets, asynchronously loaded
 // CSS with link[rel=preload] and an onload handler (see https://github.com/filamentgroup/loadCSS)
@@ -42,23 +42,43 @@ const UIStrings = {
 const str_ = i18n.createIcuMessageFn(import.meta.url, UIStrings);
 
 /**
+ * @param {LH.Artifacts.ProcessedTrace} processedTrace
+ * @return {Set<string>}
+ */
+function getBlockingRequestIds(processedTrace) {
+  const blockingRequestIds = new Set();
+
+  for (const event of processedTrace.frameEvents) {
+    if (event.name !== 'ResourceSendRequest') continue;
+    if (!event.args.data?.requestId || !event.args.data.renderBlocking) continue;
+
+    const {requestId, renderBlocking} = event.args.data;
+    if (renderBlocking !== 'blocking' && renderBlocking !== 'in_body_parser_blocking') continue;
+
+    blockingRequestIds.add(requestId);
+  }
+
+  return blockingRequestIds;
+}
+
+/**
  * Given a simulation's nodeTimings, return an object with the nodes/timing keyed by network URL
  * @param {LH.Gatherer.Simulation.Result['nodeTimings']} nodeTimings
- * @return {Object<string, {node: Node, nodeTiming: LH.Gatherer.Simulation.NodeTiming}>}
+ * @return {Map<string, {node: NetworkNode, nodeTiming: LH.Gatherer.Simulation.NodeTiming}>}
  */
-function getNodesAndTimingByUrl(nodeTimings) {
-  /** @type {Object<string, {node: Node, nodeTiming: LH.Gatherer.Simulation.NodeTiming}>} */
-  const urlMap = {};
-  const nodes = Array.from(nodeTimings.keys());
-  nodes.forEach(node => {
-    if (node.type !== 'network') return;
+function getNodesAndTimingByRequestId(nodeTimings) {
+  /** @type {Map<string, {node: NetworkNode, nodeTiming: LH.Gatherer.Simulation.NodeTiming}>} */
+  const requestMap = new Map();
+
+  for (const node of nodeTimings.keys()) {
+    if (node.type !== 'network') continue;
     const nodeTiming = nodeTimings.get(node);
-    if (!nodeTiming) return;
+    if (!nodeTiming) continue;
 
-    urlMap[node.record.url] = {node, nodeTiming};
-  });
+    requestMap.set(node.record.requestId, {node, nodeTiming});
+  }
 
-  return urlMap;
+  return requestMap;
 }
 
 /**
@@ -119,8 +139,7 @@ class RenderBlockingResources extends Audit {
       guidanceLevel: 2,
       // TODO: look into adding an `optionalArtifacts` property that captures the non-required nature
       // of CSSUsage
-      requiredArtifacts: ['URL', 'TagsBlockingFirstPaint', 'traces', 'devtoolsLogs', 'CSSUsage',
-        'GatherContext', 'Stacks'],
+      requiredArtifacts: ['URL', 'traces', 'devtoolsLogs', 'CSSUsage', 'GatherContext', 'Stacks'],
     };
   }
 
@@ -134,7 +153,7 @@ class RenderBlockingResources extends Audit {
     const trace = artifacts.traces[Audit.DEFAULT_PASS];
     const devtoolsLog = artifacts.devtoolsLogs[Audit.DEFAULT_PASS];
     const simulatorData = {devtoolsLog, settings: context.settings};
-    const processedNavigation = await ProcessedNavigation.request(trace, context);
+    const processedTrace = await ProcessedTrace.request(trace, context);
     const simulator = await LoadSimulator.request(simulatorData, context);
     const wastedCssBytes = await RenderBlockingResources.computeWastedCSSBytes(artifacts, context);
 
@@ -150,19 +169,20 @@ class RenderBlockingResources extends Audit {
     // Cast to just `LanternMetric` since we explicitly set `throttlingMethod: 'simulate'`.
     const fcpSimulation = /** @type {LH.Artifacts.LanternMetric} */
       (await FirstContentfulPaint.request(metricComputationData, context));
-    const fcpTsInMs = processedNavigation.timestamps.firstContentfulPaint / 1000;
 
-    const nodesByUrl = getNodesAndTimingByUrl(fcpSimulation.optimisticEstimate.nodeTimings);
+    const blockingRequestIds = getBlockingRequestIds(processedTrace);
+    const nodesByRequestId =
+      getNodesAndTimingByRequestId(fcpSimulation.optimisticEstimate.nodeTimings);
 
     const results = [];
     const deferredNodeIds = new Set();
-    for (const resource of artifacts.TagsBlockingFirstPaint) {
-      // Ignore any resources that finished after observed FCP (they're clearly not render-blocking)
-      if (resource.endTime > fcpTsInMs) continue;
-      // TODO: beacon to Sentry, https://github.com/GoogleChrome/lighthouse/issues/7041
-      if (!nodesByUrl[resource.tag.url]) continue;
 
-      const {node, nodeTiming} = nodesByUrl[resource.tag.url];
+    for (const requestId of blockingRequestIds) {
+      const nodeAndTiming = nodesByRequestId.get(requestId);
+      // TODO: beacon to Sentry, https://github.com/GoogleChrome/lighthouse/issues/7041
+      if (!nodeAndTiming) continue;
+
+      const {node, nodeTiming} = nodeAndTiming;
 
       const stackSpecificTiming = computeStackSpecificTiming(node, nodeTiming, artifacts.Stacks);
 
@@ -174,8 +194,8 @@ class RenderBlockingResources extends Audit {
       if (wastedMs < MINIMUM_WASTED_MS) continue;
 
       results.push({
-        url: resource.tag.url,
-        totalBytes: resource.transferSize,
+        url: node.record.url,
+        totalBytes: node.record.transferSize,
         wastedMs,
       });
     }
