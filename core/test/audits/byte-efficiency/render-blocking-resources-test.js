@@ -18,8 +18,8 @@ const trace = readJson('../../fixtures/traces/progressive-app-m60.json', import.
 const devtoolsLog = readJson('../../fixtures/traces/progressive-app-m60.devtools.log.json', import.meta);
 const ampTrace = readJson('../../fixtures/traces/amp-m86.trace.json', import.meta);
 const ampDevtoolsLog = readJson('../../fixtures/traces/amp-m86.devtoolslog.json', import.meta);
-const textLcpTrace = readJson('../../fixtures/traces/frame-metrics-m90.json', import.meta);
-const textLcpDevtoolsLog = readJson('../../fixtures/traces/frame-metrics-m90.devtools.log.json', import.meta);
+const textLcpTrace = readJson('../../fixtures/artifacts/render-blocking/trace.json', import.meta);
+const textLcpDevtoolsLog = readJson('../../fixtures/artifacts/render-blocking/devtoolslog.json', import.meta);
 
 const mobileSlow4G = constants.throttling.mobileSlow4G;
 
@@ -30,12 +30,6 @@ describe('Render blocking resources audit', () => {
       GatherContext: {gatherMode: 'navigation'},
       traces: {defaultPass: trace},
       devtoolsLogs: {defaultPass: devtoolsLog},
-      TagsBlockingFirstPaint: [
-        {
-          tag: {url: 'https://pwa.rocks/script.js'},
-          transferSize: 621,
-        },
-      ],
     };
 
     const settings = {throttlingMethod: 'simulate', throttling: mobileSlow4G};
@@ -52,21 +46,13 @@ describe('Render blocking resources audit', () => {
       GatherContext: {gatherMode: 'navigation'},
       traces: {defaultPass: textLcpTrace},
       devtoolsLogs: {defaultPass: textLcpDevtoolsLog},
-      TagsBlockingFirstPaint: [
-        {
-          tag: {url: 'http://localhost:10200/perf/frame-metrics-inner.html'},
-        },
-        {
-          tag: {url: 'http://localhost:10200/favicon.ico'},
-        },
-      ],
       Stacks: [],
     };
 
     const settings = {throttlingMethod: 'simulate', throttling: mobileSlow4G};
     const computedCache = new Map();
     const result = await RenderBlockingResourcesAudit.audit(artifacts, {settings, computedCache});
-    assert.deepStrictEqual(result.metricSavings, {FCP: 783, LCP: 783});
+    assert.deepStrictEqual(result.metricSavings, {FCP: 138, LCP: 138});
   });
 
   it('evaluates amp page correctly', async () => {
@@ -75,19 +61,6 @@ describe('Render blocking resources audit', () => {
       GatherContext: {gatherMode: 'navigation'},
       traces: {defaultPass: ampTrace},
       devtoolsLogs: {defaultPass: ampDevtoolsLog},
-      TagsBlockingFirstPaint: [
-        {
-          tag: {
-            url:
-              'https://fonts.googleapis.com/css?family=Fira+Sans+Condensed%3A400%2C400i%2C600%2C600i&subset=latin%2Clatin-ext&display=swap',
-          },
-          transferSize: 621,
-        },
-        {
-          tag: {url: 'https://fonts.googleapis.com/css?family=Montserrat'},
-          transferSize: 621,
-        },
-      ],
       Stacks: [
         {
           detector: 'js',
@@ -105,7 +78,7 @@ describe('Render blocking resources audit', () => {
     expect(result.numericValue).toMatchInlineSnapshot(`469`);
     expect(result.details.items).toMatchObject([
       {
-        'totalBytes': 621,
+        'totalBytes': 979,
         'url': 'https://fonts.googleapis.com/css?family=Fira+Sans+Condensed%3A400%2C400i%2C600%2C600i&subset=latin%2Clatin-ext&display=swap',
         'wastedMs': 440,
       },
