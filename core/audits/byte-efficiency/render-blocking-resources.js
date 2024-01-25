@@ -53,7 +53,7 @@ function getBlockingRequestIds(processedTrace) {
     if (!event.args.data?.requestId || !event.args.data.renderBlocking) continue;
 
     const {requestId, renderBlocking} = event.args.data;
-    if (renderBlocking !== 'blocking' && renderBlocking !== 'in_body_parser_blocking') continue;
+    if (renderBlocking !== 'blocking') continue;
 
     blockingRequestIds.add(requestId);
   }
