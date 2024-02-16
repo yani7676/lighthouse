@@ -384,11 +384,11 @@ function waitForLoadEvent(session, pauseAfterLoadMs) {
  */
 async function isPageHung(session) {
   try {
-    session.setNextProtocolTimeout(1000);
+    session.setNextProtocolTimeout(5000);
     await session.sendCommand('Runtime.evaluate', {
       expression: '"ping"',
       returnByValue: true,
-      timeout: 1000,
+      timeout: 5000,
     });
 
     return false;
