@@ -205,7 +205,6 @@ async function audit() {
       try {
         const args = [
           `${LH_ROOT}/cli`,
-          url,
           `--audit-mode=${gatherDir}`,
           `--output-path=${outputPath}`,
           '--output=json',
