@@ -35,6 +35,7 @@ function createMockSession() {
     off: fnAny(),
     addProtocolMessageListener: createMockOnFn(),
     removeProtocolMessageListener: fnAny(),
+    listenForCrashes: fnAny(),
     dispose: fnAny(),
 
     /** @return {LH.Gatherer.ProtocolSession} */

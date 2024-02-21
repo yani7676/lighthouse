@@ -5,6 +5,7 @@
  */
 
 import EventEmitter from 'events';
+import log from 'lighthouse-logger';
 
 import {LighthouseError} from '../lib/lh-error.js';
 
@@ -42,6 +43,10 @@ class ProtocolSession extends CrdpEventEmitter {
     this._handleProtocolEvent = this._handleProtocolEvent.bind(this);
     // @ts-expect-error Puppeteer expects the handler params to be type `unknown`
     this._cdpSession.on('*', this._handleProtocolEvent);
+
+    /** @type {null | LighthouseError} */
+    this._crashError = null;
+    this.listenForCrashes();
   }
 
   id() {
@@ -98,8 +103,10 @@ class ProtocolSession extends CrdpEventEmitter {
     /** @type {NodeJS.Timer|undefined} */
     let timeout;
     const timeoutPromise = new Promise((resolve, reject) => {
+      // Unexpected setTimeout invocation to preserve the error stack. https://github.com/GoogleChrome/lighthouse/issues/13332
       // eslint-disable-next-line max-len
-      timeout = setTimeout(reject, timeoutMs, new LighthouseError(LighthouseError.errors.PROTOCOL_TIMEOUT, {
+      console.log('um', this._crashError);
+      timeout = setTimeout(reject, timeoutMs, this._crashError ?? new LighthouseError(LighthouseError.errors.PROTOCOL_TIMEOUT, {
         protocolMethod: method,
       }));
     });
@@ -119,21 +126,24 @@ class ProtocolSession extends CrdpEventEmitter {
    * Reject if the gathering terminates due to the CDP target crashing, etc
    * @return {Promise<void>}
    */
-  async getGatherTerminatedPromise() {
+  async listenForCrashes() {
     /** @param {number} ms */
     const wait = ms => new Promise(resolve => setTimeout(resolve, ms));
 
-    return new Promise((_, reject) => {
-      this.on('Inspector.targetCrashed', async _ => {
-        await wait(1000);
-        reject(new LHError(LHError.errors.TARGET_CRASHED));
-      });
-      // In case of crash, detached fires after targetCrashed, so we'll exit with the crash code
-      // Detachment happens (in non-crash cases) when the browser tab is closed or unexpected connection failure.
-      this.on('Inspector.detached', async _ => {
-        await wait(1000);
-        reject(new LHError(LHError.errors.TARGET_DETACHED));
-      });
+    this.on('Inspector.targetCrashed', async _ => {
+      log.error('Session', 'Inspector.targetCrashed');
+      // await wait(1000); // avoid ctrl-c sigint => chromelauncher.kill() triggering this.
+      this._crashError = new LighthouseError(LighthouseError.errors.TARGET_CRASHED);
+      // throw this._crashError;
+    });
+    // In case of crash, detached fires after targetCrashed, so we'll exit with the crash code
+    // Detachment happens (in non-crash cases) when the browser tab is closed or unexpected connection failure.
+    this.on('Inspector.detached', async _ => {
+      log.error('Session', 'Inspector.detached');
+      // await wait(1000); // avoid ctrl-c sigint => chromelauncher.kill() triggering this.
+      if (!this._crashError) {
+        this._crashError = new LighthouseError(LighthouseError.errors.TARGET_DETACHED);
+      }
     });
   }
 

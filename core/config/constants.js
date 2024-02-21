@@ -91,8 +91,8 @@ const userAgents = {
 /** @type {LH.Config.Settings} */
 const defaultSettings = {
   output: 'json',
-  maxWaitForFcp: 30 * 1000,
-  maxWaitForLoad: 45 * 1000,
+  maxWaitForFcp: 10 * 1000,
+  maxWaitForLoad: 15 * 1000,
   pauseAfterFcpMs: 1000,
   pauseAfterLoadMs: 1000,
   networkQuietThresholdMs: 1000,
