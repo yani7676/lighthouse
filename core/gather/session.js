@@ -116,6 +116,28 @@ class ProtocolSession extends CrdpEventEmitter {
   }
 
   /**
+   * Reject if the gathering terminates due to the CDP target crashing, etc
+   * @return {Promise<void>}
+   */
+  async getGatherTerminatedPromise() {
+    /** @param {number} ms */
+    const wait = ms => new Promise(resolve => setTimeout(resolve, ms));
+
+    return new Promise((_, reject) => {
+      this.on('Inspector.targetCrashed', async _ => {
+        await wait(1000);
+        reject(new LHError(LHError.errors.TARGET_CRASHED));
+      });
+      // In case of crash, detached fires after targetCrashed, so we'll exit with the crash code
+      // Detachment happens (in non-crash cases) when the browser tab is closed or unexpected connection failure.
+      this.on('Inspector.detached', async _ => {
+        await wait(1000);
+        reject(new LHError(LHError.errors.TARGET_DETACHED));
+      });
+    });
+  }
+
+  /**
    * Disposes of a session so that it can no longer talk to Chrome.
    * @return {Promise<void>}
    */

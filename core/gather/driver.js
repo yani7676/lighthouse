@@ -74,6 +74,7 @@ class Driver {
     return this._page.url();
   }
 
+
   /** @return {Promise<void>} */
   async connect() {
     if (this.defaultSession !== throwingSession) return;
