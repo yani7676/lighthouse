@@ -175,7 +175,11 @@ async function gather() {
         url,
         `--gather-mode=${gatherDir}`,
         ...argv.lhFlags.split(' '),
-      ]);
+      ]).catch(err => {
+        if (!fs.existsSync(`${gatherDir}/artifacts.json`)) {
+          throw err;
+        }
+      });
     }
   }
   progress.closeProgress();
@@ -211,8 +215,10 @@ async function audit() {
           ...argv.lhFlags.split(' '),
         ];
         await execFile('node', args);
-      } catch (e) {
-        console.error('audit error:', e);
+      } catch (err) {
+        if (!fs.existsSync(outputPath)) {
+          throw err;
+        }
       }
     }
   }

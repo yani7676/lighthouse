@@ -3,28 +3,6 @@ import fs from 'fs';
 import glob from 'glob';
 
 const urls = `
-http://abehiroshi.la.coocan.jp/
-http://best-hashtags.com/
-http://brasilista.blogspot.com/2017/08/maiores-pepitas-de-ouro-encontradas-no.html?m=0
-http://c98540qo.beget.tech/
-http://centrallibrary.cit.ac.in/
-http://exocolonist.com/
-http://kuafor.me/
-http://melodic-class.glitch.me/debugger.html
-http://mobiledtp.charislms.com/login.php
-http://nobisnet.dk/kea/10_exam/karen_copenhagen/index.html
-http://promotiespullen.web2printsoftware.nl/
-http://staging.getmecab.com/
-http://themonsite.com/
-http://universovigil.com/
-http://wamatex.pl/
-http://www.asrar-e-deen.com/
-http://www.bewoksushi.com/index.html
-http://www.pompifresh.com/hemocalm/
-http://www.promotiespullen.com/
-http://www.ucarinc.com/
-http://yargs.js.org/
-http://yveschaput.com/
 https://7up.in/
 https://academy.elice.io/
 https://activecorp.com.br/
@@ -34,7 +12,6 @@ https://aimementoring.com/
 https://akash-manna.bitbucket.io/
 https://akkikhambhata.wordpress.com/tag/jquery-get-element-value-from-ul-li/
 https://alexandrammr.github.io/blog/10-things-I-love-about-Romania/
-https://allcorp2.aspro-demo.ru/
 https://alrowad.sa/
 https://altbalajifire.firebaseapp.com/
 https://amradelata.github.io/
@@ -75,7 +52,6 @@ https://data-11fec.firebaseapp.com/
 https://dealsfinders.blog/
 https://deardiary.wtf/
 https://deb.nodesource.com/setup_14.x
-https://designrevision.com/demo/shards-dashboards/index.html
 https://dev.dlzpgroup.com/
 https://devclub-kisii.firebaseapp.com/
 https://developers.google.com/machine-learning/glossary/#c
@@ -110,7 +86,6 @@ https://hogventure.com/
 https://hub.docker.com/r/femtopixel/google-lighthouse
 https://icommuse.com/ctcaelite/5/
 https://icommuse.com/ctcaelite/5/#/tab/home
-https://images-eu.ssl-images-amazon.com/images/G/01/AUIClients/ClientSideMetricsAUIJavascript@jserrorsForester.10f2559e93ec589d92509318a7e2acbac74c343a._V2_.js
 https://indonesian-online.com/
 https://ismaeljdz7.com/
 https://jamstack.wtf/
@@ -130,7 +105,6 @@ https://lonelycpp.github.io/
 https://lp.the123.co.il/sp/licoplus123/
 https://m-g-shahriar.github.io/portfolio/
 https://m.douban.com/
-https://m.media-amazon.com/images/G/01/csm/showads.v2.js
 https://m.mishifeng.com/city
 https://mapy.cz/zakladni?x=14.4007705&y=50.0713520&z=11
 https://marcoc76.github.io/calificaciones/
@@ -151,10 +125,8 @@ https://nicholasireland.ca/
 https://nigel-aves-photography.com/
 https://nmsnewhaven.org/
 https://nodejs.org/api/cli.html#cli_unhandled_rejections_mode
-https://nutrifacts-app.firebaseapp.com/search
 https://oautah.org/
 https://ocioalicante.net/
-https://oodle-demo.firebaseapp.com/#/
 https://osteklenie812.ru/blog/moskitnie-setki-okna
 https://password-generator.kamilnowak.com/
 https://pdfbooksfree.pk/
@@ -167,7 +139,6 @@ https://praveenpal4232.github.io/
 https://preactjs.com/
 https://prepaidcompare.net/
 https://punyachatterjee.com/
-https://pushdemo-f7986.firebaseapp.com/selfietravel/login
 https://rachio.com/
 https://rburkitt.github.io/BlazorApplication2/
 https://renato66.github.io/
@@ -177,14 +148,12 @@ https://sa2019.siggraph.org/
 https://sanjaytandon.in/
 https://shivam-verma9999.github.io/sliding-tiles-puzzle/
 https://shodipoayomide.com/
-https://simplybearings.co.uk/shop/advanced_search_result.php?search_in_description=1&keywords=0.75X1.25X0.25_R23&search_inactive=on
 https://sites.google.com/view/education-inc/home
 https://smartfinancial.com/
 https://sproboticworks.com/user/home
 https://stackexchange.com/
 https://stackoverflow.com/questions/18455644/programmatically-get-memory-usage-in-chrome
 https://stackoverflow.com/questions/37494330/display-none-in-a-for-loop-and-its-affect-on-reflow
-https://stackoverflow.com/questions/tagged/node.js
 https://staging.digitary.net/
 https://staging.suttacentral.net/
 https://static.fsf.org/fsforg/rss/blogs.xml
@@ -304,8 +273,6 @@ https://www.naqshi.com/
 https://www.news18.com/
 https://www.noom.com/#/
 https://www.npmjs.com/package/which
-https://www.nsowo.com/16624/%d8%a3%d9%81%d8%b6%d9%84-%d9%88%d8%b8%d8%a7%d8%a6%d9%81-%d9%81%d9%8a-%d8%a7%d9%84%d8%b9%d8%a7%d9%84%d9%85-%d9%88%d8%a7%d9%84%d8%a3%d8%b9%d9%84%d9%89-%d8%b1%d8%a7%d8%aa%d8%a8%d8%a7/
-https://www.nsowo.com/30876/%D8%A3%D8%B3%D9%85%D8%A7%D8%A1-%D8%A8%D9%86%D8%A7%D8%AA-%D9%85%D8%B9-%D8%A7%D9%84%D8%B5%D9%81%D8%A7%D8%AA-%D9%84%D9%83%D9%84-%D8%A7%D8%B3%D9%85-%D9%81%D8%AA%D8%A7%D8%A9/
 https://www.officedepot.com/configurator/create-on-demand/#/product/poster/1041
 https://www.olx.in/
 https://www.openstudio.one/
@@ -332,7 +299,6 @@ https://www.tiffany.com/
 https://www.tpkha.com/
 https://www.trekksoft.com/
 https://www.tributemedia.com/
-https://www.uncappedfibre.co.za/telkom/openserve?fbclid=IwAR3mmZzaalR7eWrObcYi3LAagagaocBzroJdAj0DYe4AVwkci0EjdtLnwl4
 https://www.verivox.de/
 https://www.vsointernational.org/
 https://www.w3schools.com/
@@ -348,7 +314,7 @@ https://xpos-master.firebaseapp.com/portal
 https://yabbermarketing.com/
 https://yhotie.com/
 https://zoihospitals.com/
-`.trim().split('\n').slice(0, 10);
+`.trim().split('\n');
 
 const sha = execFileSync('git', ['rev-parse', 'HEAD']).toString().trim();
 const name = `baseline-${sha}`;
@@ -359,7 +325,7 @@ execFileSync('node', [
     '--name', name,
     '--collect',
     '-n', String(iter),
-    `--lh-flags='--chrome-flags=--headless=new'`,
+    `--lh-flags='--only-categories=performance --chrome-flags=--headless=new'`,
     '--urls', ...urls,
 ], {stdio: 'inherit'});
 
