@@ -5,6 +5,8 @@
  */
 
 import {Protocol as Crdp} from 'devtools-protocol/types/protocol.js';
+import * as TraceEngine from '@paulirish/trace_engine';
+import {LayoutShiftRootCausesData} from '@paulirish/trace_engine/models/trace/root-causes/LayoutShift.js';
 
 import {parseManifest} from '../core/lib/manifest-parser.js';
 import {Simulator} from '../core/lib/dependency-graph/simulator/simulator.js';
@@ -23,7 +25,6 @@ import LHResult from './lhr/lhr.js'
 import Protocol from './protocol.js';
 import Util from './utility-types.js';
 import Audit from './audit.js';
-import {TraceProcessor, LayoutShiftRootCauses} from './trace-engine.js';
 
 export type Artifacts = BaseArtifacts & GathererArtifacts;
 
@@ -569,10 +570,10 @@ declare module Artifacts {
     type?: string;
   }
 
-  type TraceEngineResult = TraceProcessor['data'];
+  type TraceEngineResult = TraceEngine.Handlers.Types.TraceParseData;
 
   interface TraceEngineRootCauses {
-    layoutShifts: Record<number, LayoutShiftRootCauses>;
+    layoutShifts: Record<number, LayoutShiftRootCausesData>;
   }
 
   interface ViewportDimensions {

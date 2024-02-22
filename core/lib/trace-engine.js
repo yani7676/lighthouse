@@ -1,15 +1,14 @@
-// @ts-expect-error missing types
 import * as TraceEngine from '@paulirish/trace_engine';
 
 import {polyfillDOMRect} from './polyfill-dom-rect.js';
 
+/** @typedef {import('@paulirish/trace_engine').Types.TraceEvents.SyntheticLayoutShift} SyntheticLayoutShift */
+/** @typedef {SyntheticLayoutShift & {args: {data: NonNullable<SyntheticLayoutShift['args']['data']>}}} SaneSyntheticLayoutShift */
+
 polyfillDOMRect();
 
-/** @type {import('../../types/trace-engine.js').TraceProcessor & typeof import('../../types/trace-engine.js').TraceProcessor} */
 const TraceProcessor = TraceEngine.Processor.TraceProcessor;
-/** @type {import('../../types/trace-engine.js').TraceHandlers} */
 const TraceHandlers = TraceEngine.Handlers.ModelHandlers;
-/** @type {import('../../types/trace-engine.js').RootCauses & typeof import('../../types/trace-engine.js').RootCauses} */
 const RootCauses = TraceEngine.RootCauses.RootCauses.RootCauses;
 
 export {

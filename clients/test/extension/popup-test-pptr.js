@@ -51,7 +51,6 @@ describe('Lighthouse chrome popup', function() {
   before(async function() {
     // start puppeteer
     browser = await puppeteer.launch({
-      headless: 'new',
       executablePath: getChromePath(),
     });
 

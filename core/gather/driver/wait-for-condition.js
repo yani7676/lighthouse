@@ -447,6 +447,21 @@ async function waitForFullyLoaded(session, networkMonitor, options) {
   // CPU listener. Resolves when the CPU has been idle for cpuQuietThresholdMs after network idle.
   let resolveOnCPUIdle = waitForNothing();
 
+  if (log.isVerbose()) {
+    resolveOnFcp.promise.then(() => {
+      log.verbose('waitFor', 'resolveOnFcp fired');
+    });
+    resolveOnLoadEvent.promise.then(() => {
+      log.verbose('waitFor', 'resolveOnLoadEvent fired');
+    });
+    resolveOnNetworkIdle.promise.then(() => {
+      log.verbose('waitFor', 'resolveOnNetworkIdle fired');
+    });
+    resolveOnCriticalNetworkIdle.promise.then(() => {
+      log.verbose('waitFor', 'resolveOnCriticalNetworkIdle fired');
+    });
+  }
+
   // Wait for all initial load promises. Resolves on cleanup function the clears load
   // timeout timer.
   /** @type {Promise<() => Promise<{timedOut: boolean}>>} */

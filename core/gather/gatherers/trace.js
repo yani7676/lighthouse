@@ -61,7 +61,8 @@ class Trace extends BaseGatherer {
 
       // Not used by Lighthouse (yet) but included for users that want JS samples when looking at
       // a trace collected by Lighthouse (e.g. "View Trace" workflow in DevTools)
-      'disabled-by-default-v8.cpu_profiler',
+      // TODO: Re-enable after investigating b/325659693
+      // 'disabled-by-default-v8.cpu_profiler',
     ];
   }
 

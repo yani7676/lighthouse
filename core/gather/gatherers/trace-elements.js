@@ -117,15 +117,19 @@ class TraceElements extends BaseGatherer {
   static async getTopLayoutShifts(trace, traceEngineResult, rootCauses, context) {
     const {impactByNodeId} = await CumulativeLayoutShift.request(trace, context);
     const clusters = traceEngineResult.LayoutShifts.clusters ?? [];
-    const layoutShiftEvents = clusters.flatMap(c => c.events);
+    const layoutShiftEvents =
+      /** @type {import('../../lib/trace-engine.js').SaneSyntheticLayoutShift[]} */(
+        clusters.flatMap(c => c.events)
+      );
 
     return layoutShiftEvents
       .sort((a, b) => b.args.data.weighted_score_delta - a.args.data.weighted_score_delta)
       .slice(0, MAX_LAYOUT_SHIFTS)
       .flatMap(event => {
         const nodeIds = [];
+        const impactedNodes = event.args.data.impacted_nodes || [];
         const biggestImpactedNodeId =
-          this.getBiggestImpactNodeForShiftEvent(event.args.data.impacted_nodes, impactByNodeId);
+          this.getBiggestImpactNodeForShiftEvent(impactedNodes, impactByNodeId);
         if (biggestImpactedNodeId !== undefined) {
           nodeIds.push(biggestImpactedNodeId);
         }

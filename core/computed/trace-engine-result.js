@@ -26,8 +26,13 @@ class TraceEngineResult {
       Samples: TraceEngine.TraceHandlers.Samples,
       Screenshots: TraceEngine.TraceHandlers.Screenshots,
     });
-    await engine.parse(traceEvents);
-    return engine.data;
+    // eslint-disable-next-line max-len
+    await engine.parse(/** @type {import('@paulirish/trace_engine').Types.TraceEvents.TraceEventData[]} */ (
+      traceEvents
+    ));
+    // TODO: use TraceEngine.TraceProcessor.createWithAllHandlers above.
+    return /** @type {import('@paulirish/trace_engine').Handlers.Types.TraceParseData} */(
+      engine.data);
   }
 
   /**
@@ -61,7 +66,11 @@ class TraceEngineResult {
       }
     }
 
-    return TraceEngineResult.runTraceEngine(traceEvents);
+    const result = await TraceEngineResult.runTraceEngine(traceEvents);
+    if (!result) {
+      throw new Error('null trace engine result');
+    }
+    return result;
   }
 }
 

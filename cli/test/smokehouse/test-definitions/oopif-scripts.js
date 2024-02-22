@@ -107,14 +107,14 @@ const expectations = {
         source: 'network',
       },
       {
-        // Worker requests emitted on the worker's parent target since M121.
-        _minChromiumVersion: '121',
+        // Worker requests emitted on the worker's parent target since M123.
+        _minChromiumVersion: '123',
         src: 'http://localhost:10200/simple-worker.mjs',
         source: 'network',
       },
       {
-        // Worker requests emitted on the worker's parent target since M121.
-        _minChromiumVersion: '121',
+        // Worker requests emitted on the worker's parent target since M123.
+        _minChromiumVersion: '123',
         src: 'http://localhost:10200/simple-worker.js',
         source: 'network',
       },

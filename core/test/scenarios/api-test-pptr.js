@@ -11,6 +11,8 @@ import {createTestState, getAuditsBreakdown} from './pptr-test-utils.js';
 import {LH_ROOT} from '../../../shared/root.js';
 import {TargetManager} from '../../gather/driver/target-manager.js';
 
+const doubleRaf = 'new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)))';
+
 describe('Individual modes API', function() {
   // eslint-disable-next-line no-invalid-this
   this.timeout(120_000);
@@ -76,7 +78,7 @@ describe('Individual modes API', function() {
       await setupTestPage();
 
       // Wait long enough to ensure a paint after button interaction.
-      await state.page.waitForTimeout(200);
+      await state.page.evaluate(doubleRaf);
 
       const result = await run.endTimespan();
       if (!result) throw new Error('Lighthouse failed to produce a result');
@@ -139,7 +141,7 @@ describe('Individual modes API', function() {
       await page.waitForSelector('input');
 
       // Wait long enough to ensure a paint after button interaction.
-      await page.waitForTimeout(200);
+      await page.evaluate(doubleRaf);
 
       const result = await run.endTimespan();
 

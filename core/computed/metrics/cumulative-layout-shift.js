@@ -159,7 +159,13 @@ class CumulativeLayoutShift {
         LayoutShifts: TraceEngine.TraceHandlers.LayoutShifts,
         Screenshots: TraceEngine.TraceHandlers.Screenshots,
       });
-      await processor.parse(events);
+      // eslint-disable-next-line max-len
+      await processor.parse(/** @type {import('@paulirish/trace_engine').Types.TraceEvents.TraceEventData[]} */ (
+        events
+      ));
+      if (!processor.data) {
+        throw new Error('null trace engine result');
+      }
       return processor.data.LayoutShifts.sessionMaxScore;
     };
     const cumulativeLayoutShift = await run(allFrameShiftEvents.map(e => e.event));

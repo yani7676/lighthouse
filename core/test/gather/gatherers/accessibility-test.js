@@ -43,7 +43,6 @@ describe('a11y audits + aXe', () => {
 
   before(async () => {
     browser = await puppeteer.launch({
-      headless: 'new',
       executablePath: getChromePath(),
     });
   });
