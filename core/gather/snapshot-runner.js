@@ -40,6 +40,7 @@ async function snapshotGather(page, options = {}) {
     baseArtifacts.URL = {
       finalDisplayedUrl: url,
     };
+
     const artifactDefinitions = resolvedConfig.artifacts || [];
     const artifactState = getEmptyArtifactState();
     await collectPhaseArtifacts({
