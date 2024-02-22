@@ -318,10 +318,11 @@ async function navigationGather(page, requestor, options = {}) {
     return finalizeArtifacts(baseArtifacts, artifacts);
   };
   const runnerGatherP = Runner.gather(gatherFn, runnerOptions);
-  const [err, artifacts] = await Promise.all([crashP, runnerGatherP]);
-  if (err) {
-    return Promise.reject(err);
+  const artifactsOrError = await Promise.race([crashP, runnerGatherP]);
+  if (artifactsOrError instanceof LighthouseError) {
+    return Promise.reject(artifactsOrError);
   }
+  const artifacts = /** @type {LH.Artifacts} */ (artifactsOrError);
   return {artifacts, runnerOptions};
 }
 

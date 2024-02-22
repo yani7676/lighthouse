@@ -11,6 +11,7 @@ import {Runner} from '../runner.js';
 import {getEmptyArtifactState, collectPhaseArtifacts, awaitArtifacts, getRejectionCallback} from './runner-helpers.js';
 import {enableAsyncStacks, prepareTargetForTimespanMode} from './driver/prepare.js';
 import {initializeConfig} from '../config/config.js';
+import {LighthouseError} from '../lib/lh-error.js';
 import {getBaseArtifacts, finalizeArtifacts} from './base-artifacts.js';
 import * as i18n from '../lib/i18n/i18n.js';
 
@@ -96,11 +97,13 @@ async function startTimespanGather(page, options = {}) {
         const artifacts = await awaitArtifacts(artifactState);
         return finalizeArtifacts(baseArtifacts, artifacts);
       };
+
       const runnerGatherP = Runner.gather(gatherFn, runnerOptions);
-      const [err, artifacts] = await Promise.all([crashP, runnerGatherP]);
-      if (err) {
-        return Promise.reject(err);
+      const artifactsOrError = await Promise.race([crashP, runnerGatherP]);
+      if (artifactsOrError instanceof LighthouseError) {
+        return Promise.reject(artifactsOrError);
       }
+      const artifacts = /** @type {LH.Artifacts} */ (artifactsOrError);
       return {artifacts, runnerOptions};
     },
   };

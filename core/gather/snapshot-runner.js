@@ -10,6 +10,7 @@ import {Driver} from './driver.js';
 import {Runner} from '../runner.js';
 import {getEmptyArtifactState, collectPhaseArtifacts, awaitArtifacts, getRejectionCallback} from './runner-helpers.js';
 import {initializeConfig} from '../config/config.js';
+import {LighthouseError} from '../lib/lh-error.js';
 import {getBaseArtifacts, finalizeArtifacts} from './base-artifacts.js';
 
 /**
@@ -58,12 +59,13 @@ async function snapshotGather(page, options = {}) {
     const artifacts = await awaitArtifacts(artifactState);
     return finalizeArtifacts(baseArtifacts, artifacts);
   };
-  
+
   const runnerGatherP = Runner.gather(gatherFn, runnerOptions);
-  const [err, artifacts] = await Promise.all([crashP, runnerGatherP]);
-  if (err) {
-    return Promise.reject(err);
+  const artifactsOrError = await Promise.race([crashP, runnerGatherP]);
+  if (artifactsOrError instanceof LighthouseError) {
+    return Promise.reject(artifactsOrError);
   }
+  const artifacts = /** @type {LH.Artifacts} */ (artifactsOrError);
   return {artifacts, runnerOptions};
 }
 
