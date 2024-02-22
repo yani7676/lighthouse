@@ -27,6 +27,7 @@ const throwingSession = {
   off: throwNotConnectedFn,
   sendCommand: throwNotConnectedFn,
   dispose: throwNotConnectedFn,
+  listenForCrashes: throwNotConnectedFn,
 };
 
 /** @implements {LH.Gatherer.Driver} */
@@ -76,10 +77,10 @@ class Driver {
 
 
   /**
-   * @param {(reason?: any) => void} crashRej
+   * @param {((reason?: any) => void) | undefined} crashRej
    * @return {Promise<void>}
    */
-  async connect(crashRej) {
+  async connect(crashRej = () => {}) {
     if (this.defaultSession !== throwingSession) return;
     const status = {msg: 'Connecting to browser', id: 'lh:driver:connect'};
     log.time(status);

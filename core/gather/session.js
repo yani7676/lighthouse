@@ -105,13 +105,6 @@ class ProtocolSession extends CrdpEventEmitter {
       timeout = setTimeout(reject, timeoutMs, new LighthouseError(LighthouseError.errors.PROTOCOL_TIMEOUT, {
         protocolMethod: method,
       }));
-      // timeout = setTimeout(() => {
-      //   console.log('firing PROTOCOL_TIMEOUT for ', method);
-      //   const err = new LighthouseError(LighthouseError.errors.PROTOCOL_TIMEOUT, {
-      //     protocolMethod: method,
-      //   });
-      //   return reject(err);
-      // }, timeoutMs);
     });
 
     const resultPromise = this._cdpSession.send(method, ...params, {

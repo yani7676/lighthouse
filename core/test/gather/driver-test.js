@@ -7,6 +7,7 @@
 import {Driver} from '../../gather/driver.js';
 import {fnAny} from '../test-utils.js';
 import {createMockCdpSession} from './mock-driver.js';
+import {getRejectionCallback} from '../../gather/runner-helpers.js';
 
 /** @type {Array<keyof LH.Gatherer.ProtocolSession>} */
 const DELEGATED_FUNCTIONS = [
@@ -22,6 +23,8 @@ const DELEGATED_FUNCTIONS = [
 let page;
 /** @type {Driver} */
 let driver;
+
+const {rej} = getRejectionCallback();
 
 beforeEach(() => {
   const puppeteerSession = createMockCdpSession();
@@ -50,7 +53,7 @@ for (const fnName of DELEGATED_FUNCTIONS) {
     });
 
     it('should use connected session for default', async () => {
-      await driver.connect();
+      await driver.connect(rej);
       if (!driver.defaultSession) throw new Error('Driver did not connect');
 
       /** @type {any} */
@@ -78,7 +81,7 @@ describe('.executionContext', () => {
   });
 
   it('should create an execution context on connect', async () => {
-    await driver.connect();
+    await driver.connect(rej);
     expect(driver.executionContext).toBeTruthy();
   });
 });
@@ -89,7 +92,7 @@ describe('.fetcher', () => {
   });
 
   it('should create a fetcher on connect', async () => {
-    await driver.connect();
+    await driver.connect(rej);
     expect(driver.fetcher).toBeTruthy();
   });
 });
@@ -100,7 +103,7 @@ describe('.disconnect', () => {
   });
 
   it('should invoke session dispose', async () => {
-    await driver.connect();
+    await driver.connect(rej);
     const dispose = driver.defaultSession.dispose = fnAny();
     await driver.disconnect();
     expect(dispose).toHaveBeenCalled();
