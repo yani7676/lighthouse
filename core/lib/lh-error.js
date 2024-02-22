@@ -435,13 +435,6 @@ const ERRORS = {
     lhrRuntimeError: true,
   },
 
-  /** The protocol connection is broken. */
-  TARGET_DETACHED: {
-    code: 'TARGET_DETACHED',
-    message: UIStrings.targetDetached,
-    lhrRuntimeError: true,
-  },
-
   // Hey! When adding a new error type, update lighthouse-result.proto too.
   // Only necessary for runtime errors, which come from artifacts or pageLoadErrors.
 };

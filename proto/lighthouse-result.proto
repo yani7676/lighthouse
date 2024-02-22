@@ -65,8 +65,6 @@ enum LighthouseError {
   CHROME_INTERSTITIAL_ERROR = 23;
   // The page has crashed and will no longer respond to 99% of CDP commmands.
   TARGET_CRASHED = 24;
-  // The protocol connection is broken.
-  TARGET_DETACHED = 25;
 }
 
 // The overarching Lighthouse Response object (LHR)
