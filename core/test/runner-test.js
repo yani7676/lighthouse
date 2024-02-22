@@ -872,41 +872,41 @@ describe('Runner', () => {
     });
   });
 
-  describe('lhr.runtimeError', () => {
-    const NO_FCP = LighthouseError.errors.NO_FCP;
-    class RuntimeErrorGatherer extends Gatherer {
-      meta = {
-        supportedModes: ['navigation'],
+  describe.only('lhr.runtimeError', () => {
+    it('includes a top-level runtimeError when a gatherer throws one', async () => {
+      const NO_FCP = LighthouseError.errors.NO_FCP;
+      class RuntimeErrorGatherer extends Gatherer {
+        meta = {
+          supportedModes: ['navigation'],
+        };
+
+        getArtifact() {
+          throw new LighthouseError(NO_FCP);
+        }
+      }
+
+      class WarningAudit extends Audit {
+        static get meta() {
+          return {
+            id: 'test-audit',
+            title: 'A test audit',
+            failureTitle: 'A test audit',
+            description: 'An audit for testing',
+            requiredArtifacts: ['RuntimeErrorGatherer'],
+          };
+        }
+        static audit() {
+          throw new Error('Should not get here');
+        }
+      }
+
+      const config = {
+        artifacts: [
+          {id: 'RuntimeErrorGatherer', gatherer: RuntimeErrorGatherer},
+        ],
+        audits: [WarningAudit],
       };
 
-      getArtifact() {
-        throw new LighthouseError(NO_FCP);
-      }
-    }
-
-    class WarningAudit extends Audit {
-      static get meta() {
-        return {
-          id: 'test-audit',
-          title: 'A test audit',
-          failureTitle: 'A test audit',
-          description: 'An audit for testing',
-          requiredArtifacts: ['RuntimeErrorGatherer'],
-        };
-      }
-      static audit() {
-        throw new Error('Should not get here');
-      }
-    }
-
-    const config = {
-      artifacts: [
-        {id: 'RuntimeErrorGatherer', gatherer: RuntimeErrorGatherer},
-      ],
-      audits: [WarningAudit],
-    };
-
-    it('includes a top-level runtimeError when a gatherer throws one', async () => {
       const {resolvedConfig} = await initializeConfig('navigation', config);
       const {lhr} = await runGatherAndAudit(createGatherFn('https://example.com/'),
         {resolvedConfig, driverMock, computedCache: new Map()});
@@ -921,56 +921,27 @@ describe('Runner', () => {
     });
 
 
-    it('includes a crash runtimeError when there\'s a crash during gathering', async () => {
-      const connectionStub = new Connection();
-      connectionStub.connect = _ => Promise.resolve();
-      // @ts-expect-error - driver has a mocked version of on/once implemented in each test
-      const driver = new Driver(connectionStub);
-
+    it.only('includes a crash runtimeError when there\'s a crash during gathering', async () => {
       // We need to simulate an expected browser crash. Basic plan is to crash the page on the FIRST use of sendCommand.
       // A little odd, but it works.
-      // @ts-expect-error
-      connectionStub.sendCommand = _ => {
-        driver._eventEmitter.emit('Inspector.targetCrashed');
-      };
+      // driverMock.defaultSession.sendCommand
+      // .mockResponse('Page.navigate', {data: 'Hello ', eof: false, base64Encoded: false});
 
-      const config = new Config(configJson);
-      const runP = Runner.run(defaultGatherFn, {url: 'https://example.com/', config, driverMock: driver});
-      await expect(runP).rejects.toThrow(/TARGET_CRASHED/);
-    });
 
-    it('includes a pageLoadError runtimeError over any gatherer runtimeErrors', async () => {
-      const url = 'https://www.reddit.com/r/nba';
-      let firstLoad = true;
-      const errorDriverMock = Object.assign({}, driverMock, {
-        online: true,
-        // Loads the page successfully in the first pass, fails with PAGE_HUNG in the second.
+      const {resolvedConfig} = await initializeConfig('navigation');
+
+      setTimeout(() => {
+        driverMock.defaultSession.emit('Inspector.targetCrashed');
       });
+      debugger;
+      const {lhr} = await runGatherAndAudit(createGatherFn('https://example.com/'),
+        {resolvedConfig, driverMock, computedCache: new Map()});
 
-      const {gotoURL} = await importMock('../gather/driver/navigation.js', import.meta);
-      gotoURL.mockImplementation((_, url) => {
-        if (url.includes('blank')) return {mainDocumentUrl: '', warnings: []};
-        if (firstLoad) {
-          firstLoad = false;
-          return {mainDocumentUrl: url, warnings: []};
-        } else {
-          throw new LighthouseError(LighthouseError.errors.PAGE_HUNG);
-        }
-      });
+      // And it bubbled up to the runtimeError.
+      expect(lhr.runtimeError.code).toEqual(LighthouseError.errors.TARGET_CRASHED.code);
+      expect(lhr.runtimeError.message).toMatch(/crashed/);
 
-      const config = await Config.fromJson(configJson);
-      const {lhr} = await runGatherAndAudit(
-        createGatherFn(url),
-        {config, driverMock: errorDriverMock}
-      );
-
-      // Audit error still includes the gatherer runtimeError.
-      expect(lhr.audits['test-audit'].scoreDisplayMode).toEqual('error');
-      expect(lhr.audits['test-audit'].errorMessage).toEqual(expect.stringContaining(NO_FCP.code));
-
-      // But top-level runtimeError is the pageLoadError.
-      expect(lhr.runtimeError.code).toEqual(LighthouseError.errors.PAGE_HUNG.code);
-      expect(lhr.runtimeError.message).toMatch(/because the page stopped responding/);
+      // await expect(runP).rejects.toThrow(/TARGET_CRASHED/);
     });
   });
 

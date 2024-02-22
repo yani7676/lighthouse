@@ -28,12 +28,13 @@ async function snapshotGather(page, options = {}) {
   /** @type {Map<string, LH.ArbitraryEqualityMap>} */
   const computedCache = new Map();
 
-  const runnerOptions = {resolvedConfig, computedCache};
   const {promise: crashP, rej: crashRej} = getRejectionCallback();
+  await driver.connect(crashRej);
+  const url = await driver.url();
+
+  const runnerOptions = {resolvedConfig, computedCache};
 
   const gatherFn = async () => {
-    await driver.connect(crashRej);
-    const url = await driver.url();
     const baseArtifacts =
         await getBaseArtifacts(resolvedConfig, driver, {gatherMode: 'snapshot'});
     baseArtifacts.URL = {
