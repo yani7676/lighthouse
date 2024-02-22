@@ -75,8 +75,11 @@ class Driver {
   }
 
 
-  /** @return {Promise<void>} */
-  async connect() {
+  /**
+   * @param {(reason?: any) => void} crashRej
+   * @return {Promise<void>}
+   */
+  async connect(crashRej) {
     if (this.defaultSession !== throwingSession) return;
     const status = {msg: 'Connecting to browser', id: 'lh:driver:connect'};
     log.time(status);
@@ -86,6 +89,7 @@ class Driver {
     this._networkMonitor = new NetworkMonitor(this._targetManager);
     await this._networkMonitor.enable();
     this.defaultSession = this._targetManager.rootSession();
+    this.defaultSession.listenForCrashes(crashRej);
     this._executionContext = new ExecutionContext(this.defaultSession);
     this._fetcher = new Fetcher(this.defaultSession);
     log.timeEnd(status);

@@ -82,6 +82,7 @@ function waitForFcp(session, pauseAfterFcpMs, maxWaitForFcpMs) {
   /** @type {Promise<void>} */
   const promise = new Promise((resolve, reject) => {
     const maxWaitTimeout = setTimeout(() => {
+      console.log('maxWaitTimeout catch NOFCP');
       reject(new LighthouseError(LighthouseError.errors.NO_FCP));
     }, maxWaitForFcpMs);
     /** @type {NodeJS.Timeout|undefined} */
@@ -482,8 +483,9 @@ async function waitForFullyLoaded(session, networkMonitor, options) {
       log.warn('waitFor', 'Timed out waiting for page load. Checking if page is hung...');
       if (await isPageHung(session)) {
         log.warn('waitFor', 'Page appears to be hung, killing JavaScript...');
-        await session.sendCommand('Emulation.setScriptExecutionDisabled', {value: true});
-        await session.sendCommand('Runtime.terminateExecution');
+        // We don't await these, as we want to exit with PAGE_HUNG
+        void session.sendCommand('Emulation.setScriptExecutionDisabled', {value: true});
+        void session.sendCommand('Runtime.terminateExecution');
         throw new LighthouseError(LighthouseError.errors.PAGE_HUNG);
       }
 

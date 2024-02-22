@@ -8,7 +8,7 @@ import log from 'lighthouse-logger';
 
 import {Driver} from './driver.js';
 import {Runner} from '../runner.js';
-import {getEmptyArtifactState, collectPhaseArtifacts, awaitArtifacts} from './runner-helpers.js';
+import {getEmptyArtifactState, collectPhaseArtifacts, awaitArtifacts, getRejectionCallback} from './runner-helpers.js';
 import {enableAsyncStacks, prepareTargetForTimespanMode} from './driver/prepare.js';
 import {initializeConfig} from '../config/config.js';
 import {getBaseArtifacts, finalizeArtifacts} from './base-artifacts.js';
@@ -33,8 +33,10 @@ async function startTimespanGather(page, options = {}) {
   log.setLevel(flags.logLevel || 'error');
 
   const {resolvedConfig} = await initializeConfig('timespan', config, flags);
+  const {promise: crashP, rej: crashRej} = getRejectionCallback();
+
   const driver = new Driver(page);
-  await driver.connect();
+  await driver.connect(crashRej);
 
   /** @type {Map<string, LH.ArbitraryEqualityMap>} */
   const computedCache = new Map();
@@ -72,31 +74,33 @@ async function startTimespanGather(page, options = {}) {
       const finalDisplayedUrl = await driver.url();
 
       const runnerOptions = {resolvedConfig, computedCache};
-      const artifacts = await Runner.gather(
-        async () => {
-          baseArtifacts.URL = {finalDisplayedUrl};
+      const gatherFn = async () => {
+        baseArtifacts.URL = {finalDisplayedUrl};
 
-          await collectPhaseArtifacts({phase: 'stopSensitiveInstrumentation', ...phaseOptions});
-          await collectPhaseArtifacts({phase: 'stopInstrumentation', ...phaseOptions});
+        await collectPhaseArtifacts({phase: 'stopSensitiveInstrumentation', ...phaseOptions});
+        await collectPhaseArtifacts({phase: 'stopInstrumentation', ...phaseOptions});
 
-          // bf-cache-failures can emit `Page.frameNavigated` at the end of the run.
-          // This can cause us to issue protocol commands after the target closes.
-          // We should disable our `Page.frameNavigated` handlers before that.
-          await disableAsyncStacks();
+        // bf-cache-failures can emit `Page.frameNavigated` at the end of the run.
+        // This can cause us to issue protocol commands after the target closes.
+        // We should disable our `Page.frameNavigated` handlers before that.
+        await disableAsyncStacks();
 
-          driver.defaultSession.off('Page.frameNavigated', onFrameNavigated);
-          if (pageNavigationDetected) {
-            baseArtifacts.LighthouseRunWarnings.push(str_(UIStrings.warningNavigationDetected));
-          }
+        driver.defaultSession.off('Page.frameNavigated', onFrameNavigated);
+        if (pageNavigationDetected) {
+          baseArtifacts.LighthouseRunWarnings.push(str_(UIStrings.warningNavigationDetected));
+        }
 
-          await collectPhaseArtifacts({phase: 'getArtifact', ...phaseOptions});
-          await driver.disconnect();
+        await collectPhaseArtifacts({phase: 'getArtifact', ...phaseOptions});
+        await driver.disconnect();
 
-          const artifacts = await awaitArtifacts(artifactState);
-          return finalizeArtifacts(baseArtifacts, artifacts);
-        },
-        runnerOptions
-      );
+        const artifacts = await awaitArtifacts(artifactState);
+        return finalizeArtifacts(baseArtifacts, artifacts);
+      };
+      const runnerGatherP = Runner.gather(gatherFn, runnerOptions);
+      const [err, artifacts] = await Promise.all([crashP, runnerGatherP]);
+      if (err) {
+        return Promise.reject(err);
+      }
       return {artifacts, runnerOptions};
     },
   };

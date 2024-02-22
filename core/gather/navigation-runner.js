@@ -9,7 +9,7 @@ import log from 'lighthouse-logger';
 
 import {Driver} from './driver.js';
 import {Runner} from '../runner.js';
-import {getEmptyArtifactState, collectPhaseArtifacts, awaitArtifacts} from './runner-helpers.js';
+import {getEmptyArtifactState, collectPhaseArtifacts, awaitArtifacts, getRejectionCallback} from './runner-helpers.js';
 import * as prepare from './driver/prepare.js';
 import {gotoURL} from './driver/navigation.js';
 import * as storage from './driver/storage.js';
@@ -40,11 +40,11 @@ const DEFAULT_HOSTNAME = '127.0.0.1';
 const DEFAULT_PORT = 9222;
 
 /**
- * @param {{driver: Driver, resolvedConfig: LH.Config.ResolvedConfig, requestor: LH.NavigationRequestor}} args
+ * @param {{driver: Driver, resolvedConfig: LH.Config.ResolvedConfig, requestor: LH.NavigationRequestor, crashRej: (reason?: any) => void}} args
  * @return {Promise<{baseArtifacts: LH.BaseArtifacts}>}
  */
-async function _setup({driver, resolvedConfig, requestor}) {
-  await driver.connect();
+async function _setup({driver, resolvedConfig, requestor, crashRej}) {
+  await driver.connect(crashRej);
 
   // We can't trigger the navigation through user interaction if we reset the page before starting.
   if (typeof requestor === 'string' && !resolvedConfig.settings.skipAboutBlank) {
@@ -91,8 +91,9 @@ async function _navigate(navigationContext) {
 
     return {requestedUrl, mainDocumentUrl, navigationError: undefined};
   } catch (err) {
+    console.log('navrunner catch', err);
     if (!(err instanceof LighthouseError)) throw err;
-    if (err.code !== 'NO_FCP' && err.code !== 'PAGE_HUNG') throw err;
+    if (err.code !== 'NO_FCP') throw err;
     if (typeof requestor !== 'string') throw err;
 
     // TODO: Make the urls optional here so we don't need to throw an error with a callback requestor.
@@ -277,44 +278,51 @@ async function navigationGather(page, requestor, options = {}) {
   const isCallback = typeof requestor === 'function';
 
   const runnerOptions = {resolvedConfig, computedCache};
-  const artifacts = await Runner.gather(
-    async () => {
-      const normalizedRequestor = isCallback ? requestor : UrlUtils.normalizeUrl(requestor);
+  const {promise: crashP, rej: crashRej} = getRejectionCallback();
 
-      /** @type {LH.Puppeteer.Browser|undefined} */
-      let lhBrowser = undefined;
-      /** @type {LH.Puppeteer.Page|undefined} */
-      let lhPage = undefined;
+  const gatherFn = async () => {
+    const normalizedRequestor = isCallback ? requestor : UrlUtils.normalizeUrl(requestor);
 
-      // For navigation mode, we shouldn't connect to a browser in audit mode,
-      // therefore we connect to the browser in the gatherFn callback.
-      if (!page) {
-        const {hostname = DEFAULT_HOSTNAME, port = DEFAULT_PORT} = flags;
-        lhBrowser = await puppeteer.connect({browserURL: `http://${hostname}:${port}`, defaultViewport: null});
-        lhPage = await lhBrowser.newPage();
-        page = lhPage;
-      }
+    /** @type {LH.Puppeteer.Browser|undefined} */
+    let lhBrowser = undefined;
+    /** @type {LH.Puppeteer.Page|undefined} */
+    let lhPage = undefined;
 
-      const driver = new Driver(page);
-      const context = {
-        driver,
-        lhBrowser,
-        lhPage,
-        page,
-        resolvedConfig,
-        requestor: normalizedRequestor,
-        computedCache,
-      };
-      const {baseArtifacts} = await _setup(context);
+    // For navigation mode, we shouldn't connect to a browser in audit mode,
+    // therefore we connect to the browser in the gatherFn callback.
+    if (!page) {
+      const {hostname = DEFAULT_HOSTNAME, port = DEFAULT_PORT} = flags;
+      lhBrowser = await puppeteer.connect({browserURL: `http://${hostname}:${port}`, defaultViewport: null});
+      lhPage = await lhBrowser.newPage();
+      page = lhPage;
+    }
 
-      const artifacts = await _navigation({...context, baseArtifacts});
+    const driver = new Driver(page);
+    const context = {
+      driver,
+      lhBrowser,
+      lhPage,
+      page,
+      resolvedConfig,
+      requestor: normalizedRequestor,
+      computedCache,
+      crashRej,
+    };
 
-      await _cleanup(context);
 
-      return finalizeArtifacts(baseArtifacts, artifacts);
-    },
-    runnerOptions
-  );
+    const {baseArtifacts} = await _setup(context);
+
+    const artifacts = await _navigation({...context, baseArtifacts});
+
+    await _cleanup(context);
+
+    return finalizeArtifacts(baseArtifacts, artifacts);
+  };
+  const runnerGatherP = Runner.gather(gatherFn, runnerOptions);
+  const [err, artifacts] = await Promise.all([crashP, runnerGatherP]);
+  if (err) {
+    return Promise.reject(err);
+  }
   return {artifacts, runnerOptions};
 }
 
