@@ -283,6 +283,7 @@ async function runMocha(tests, mochaArgs, invocationNumber) {
     rootHooks,
     timeout: 20_000,
     bail: mochaArgs.bail,
+    color: true,
     grep: mochaArgs.grep,
     forbidOnly: mochaArgs.forbidOnly,
     // TODO: not working

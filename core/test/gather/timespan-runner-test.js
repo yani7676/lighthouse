@@ -185,8 +185,9 @@ describe('Timespan Runner', () => {
     });
   });
 
-  it('should warn if a navigation was detected', async () => {
+  it.only('should warn if a navigation was detected', async () => {
     mockDriver._session.on.mockEvent('Page.frameNavigated', {});
+    mockDriver._session.on.mockEvent('Inspector.targetCrashed', {});
 
     const timespan = await startTimespanGather(page, {config});
     await flushAllTimersAndMicrotasks();

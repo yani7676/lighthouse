@@ -134,7 +134,9 @@ class ProtocolSession extends CrdpEventEmitter {
    * @return {void}
    */
   listenForCrashes(crashRej) {
+    console.log("gonna listen")
     this.on('Inspector.targetCrashed', async _ => {
+      console.error('DLFIDSF ON NO ITS A CRASH')
       log.error('Session', 'Inspector.targetCrashed', this._targetInfo);
       // Manually detach so no more CDP traffic is attempted.
       this.dispose();

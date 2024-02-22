@@ -12,7 +12,11 @@ import {
   createMockGathererInstance,
   mockDriverModule,
   mockRunnerModule,
+  createMockCdpSession,
 } from './mock-driver.js';
+import {fnAny} from '../test-utils.js';
+import {getRejectionCallback} from '../../gather/runner-helpers.js';
+import {Driver} from '../../gather/driver.js';
 
 const mockRunner = await mockRunnerModule();
 
@@ -142,5 +146,58 @@ describe('Snapshot Runner', () => {
         ImageElements: 'Artifact A',
       },
     });
+  });
+
+  it.only('includes a crash runtimeError when there\'s a crash during gathering', async () => {
+    const puppeteerSession = createMockCdpSession();
+    puppeteerSession.send
+      .mockResponse('Page.enable')
+      .mockResponse('Page.getFrameTree', {frameTree: {frame: {id: 'mainFrameId'}}})
+      .mockResponse('Runtime.enable')
+      .mockResponse('Page.disable')
+      .mockResponse('Runtime.disable')
+      .mockResponse('Target.getTargetInfo', {targetInfo: {type: 'page', targetId: 'page'}})
+      .mockResponse('Network.enable')
+      .mockResponse('Target.setAutoAttach')
+      .mockResponse('Runtime.runIfWaitingForDebugger');
+
+    const pageTarget = {createCDPSession: () => puppeteerSession};
+
+    // @ts-expect-error - Individual mock functions are applied as necessary.
+    page = {target: () => pageTarget, url: fnAny()};
+    const driver = new Driver(page);
+
+    const runP = snapshotGather(page, {config});
+    // await expect(runP).rejects.toThrow(/TARGET_CRASHED/);
+    // const wait = (ms = 100) => new Promise(resolve => setTimeout(resolve, ms));
+    // const p1 = wait(100);
+    // debugger;
+    driver.defaultSession.emit('Inspector.targetCrashed', {});
+    await runP;
+
+    const gatherResult2 = await snapshotGather(page, {config});
+    expect(mockDriver.connect).toHaveBeenCalled();
+    expect(mockRunner.gather).toHaveBeenCalled();
+    expect(mockRunner.audit).not.toHaveBeenCalled();
+    const artifacts = await mockRunner.gather.mock.calls[0][0]();
+
+     expect(artifacts).toMatchObject({A: 'Artifact A', B: 'Artifact B'});
+
+    console.log({runP});
+
+    // const {resolvedConfig} = await initializeConfig('navigation');
+
+    // setTimeout(() => {
+    //   driverMock.defaultSession.emit('Inspector.targetCrashed');
+    // });
+    // debugger;
+    // const {lhr} = await runGatherAndAudit(createGatherFn('https://example.com/'),
+    //   {resolvedConfig, driverMock, computedCache: new Map()});
+
+    // // And it bubbled up to the runtimeError.
+    // expect(lhr.runtimeError.code).toEqual(LighthouseError.errors.TARGET_CRASHED.code);
+    // expect(lhr.runtimeError.message).toMatch(/crashed/);
+
+    // await expect(runP).rejects.toThrow(/TARGET_CRASHED/);
   });
 });

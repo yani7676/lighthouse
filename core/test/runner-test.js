@@ -872,41 +872,41 @@ describe('Runner', () => {
     });
   });
 
-  describe.only('lhr.runtimeError', () => {
-    it('includes a top-level runtimeError when a gatherer throws one', async () => {
-      const NO_FCP = LighthouseError.errors.NO_FCP;
-      class RuntimeErrorGatherer extends Gatherer {
-        meta = {
-          supportedModes: ['navigation'],
-        };
-
-        getArtifact() {
-          throw new LighthouseError(NO_FCP);
-        }
-      }
-
-      class WarningAudit extends Audit {
-        static get meta() {
-          return {
-            id: 'test-audit',
-            title: 'A test audit',
-            failureTitle: 'A test audit',
-            description: 'An audit for testing',
-            requiredArtifacts: ['RuntimeErrorGatherer'],
-          };
-        }
-        static audit() {
-          throw new Error('Should not get here');
-        }
-      }
-
-      const config = {
-        artifacts: [
-          {id: 'RuntimeErrorGatherer', gatherer: RuntimeErrorGatherer},
-        ],
-        audits: [WarningAudit],
+  describe('lhr.runtimeError', () => {
+    const NO_FCP = LighthouseError.errors.NO_FCP;
+    class RuntimeErrorGatherer extends Gatherer {
+      meta = {
+        supportedModes: ['navigation'],
       };
 
+      getArtifact() {
+        throw new LighthouseError(NO_FCP);
+      }
+    }
+
+    class WarningAudit extends Audit {
+      static get meta() {
+        return {
+          id: 'test-audit',
+          title: 'A test audit',
+          failureTitle: 'A test audit',
+          description: 'An audit for testing',
+          requiredArtifacts: ['RuntimeErrorGatherer'],
+        };
+      }
+      static audit() {
+        throw new Error('Should not get here');
+      }
+    }
+
+    const config = {
+      artifacts: [
+        {id: 'RuntimeErrorGatherer', gatherer: RuntimeErrorGatherer},
+      ],
+      audits: [WarningAudit],
+    };
+
+    it('includes a top-level runtimeError when a gatherer throws one', async () => {
       const {resolvedConfig} = await initializeConfig('navigation', config);
       const {lhr} = await runGatherAndAudit(createGatherFn('https://example.com/'),
         {resolvedConfig, driverMock, computedCache: new Map()});
@@ -918,30 +918,6 @@ describe('Runner', () => {
       // And it bubbled up to the runtimeError.
       expect(lhr.runtimeError.code).toEqual(NO_FCP.code);
       expect(lhr.runtimeError.message).toMatch(/did not paint any content.*\(NO_FCP\)/);
-    });
-
-
-    it.only('includes a crash runtimeError when there\'s a crash during gathering', async () => {
-      // We need to simulate an expected browser crash. Basic plan is to crash the page on the FIRST use of sendCommand.
-      // A little odd, but it works.
-      // driverMock.defaultSession.sendCommand
-      // .mockResponse('Page.navigate', {data: 'Hello ', eof: false, base64Encoded: false});
-
-
-      const {resolvedConfig} = await initializeConfig('navigation');
-
-      setTimeout(() => {
-        driverMock.defaultSession.emit('Inspector.targetCrashed');
-      });
-      debugger;
-      const {lhr} = await runGatherAndAudit(createGatherFn('https://example.com/'),
-        {resolvedConfig, driverMock, computedCache: new Map()});
-
-      // And it bubbled up to the runtimeError.
-      expect(lhr.runtimeError.code).toEqual(LighthouseError.errors.TARGET_CRASHED.code);
-      expect(lhr.runtimeError.message).toMatch(/crashed/);
-
-      // await expect(runP).rejects.toThrow(/TARGET_CRASHED/);
     });
   });
 
