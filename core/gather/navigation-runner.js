@@ -40,11 +40,11 @@ const DEFAULT_HOSTNAME = '127.0.0.1';
 const DEFAULT_PORT = 9222;
 
 /**
- * @param {{driver: Driver, resolvedConfig: LH.Config.ResolvedConfig, requestor: LH.NavigationRequestor, crashRej: (reason?: any) => void}} args
+ * @param {{driver: Driver, resolvedConfig: LH.Config.ResolvedConfig, requestor: LH.NavigationRequestor}} args
  * @return {Promise<{baseArtifacts: LH.BaseArtifacts}>}
  */
-async function _setup({driver, resolvedConfig, requestor, crashRej}) {
-  await driver.connect(crashRej);
+async function _setup({driver, resolvedConfig, requestor}) {
+  await driver.connect();
 
   // We can't trigger the navigation through user interaction if we reset the page before starting.
   if (typeof requestor === 'string' && !resolvedConfig.settings.skipAboutBlank) {
@@ -276,9 +276,8 @@ async function navigationGather(page, requestor, options = {}) {
 
   const isCallback = typeof requestor === 'function';
 
+  let fatalRejectionPromise = new Promise((_) => {});
   const runnerOptions = {resolvedConfig, computedCache};
-  const {promise: waitForCrash, rej: crashRej} = getRejectionCallback();
-
   const gatherFn = async () => {
     const normalizedRequestor = isCallback ? requestor : UrlUtils.normalizeUrl(requestor);
 
@@ -297,6 +296,7 @@ async function navigationGather(page, requestor, options = {}) {
     }
 
     const driver = new Driver(page);
+    fatalRejectionPromise = driver.fatalRejection.promise;
     const context = {
       driver,
       lhBrowser,
@@ -305,7 +305,6 @@ async function navigationGather(page, requestor, options = {}) {
       resolvedConfig,
       requestor: normalizedRequestor,
       computedCache,
-      crashRej,
     };
 
 
@@ -318,7 +317,7 @@ async function navigationGather(page, requestor, options = {}) {
     return finalizeArtifacts(baseArtifacts, artifacts);
   };
   const runnerGatherPromise = Runner.gather(gatherFn, runnerOptions);
-  const artifactsOrError = await Promise.race([waitForCrash, runnerGatherPromise]);
+  const artifactsOrError = await Promise.race([runnerGatherPromise, fatalRejectionPromise]);
   if (artifactsOrError instanceof LighthouseError) {
     return Promise.reject(artifactsOrError);
   }

@@ -8,7 +8,7 @@ import log from 'lighthouse-logger';
 
 import {Driver} from './driver.js';
 import {Runner} from '../runner.js';
-import {getEmptyArtifactState, collectPhaseArtifacts, awaitArtifacts, getRejectionCallback} from './runner-helpers.js';
+import {getEmptyArtifactState, collectPhaseArtifacts, awaitArtifacts} from './runner-helpers.js';
 import {enableAsyncStacks, prepareTargetForTimespanMode} from './driver/prepare.js';
 import {initializeConfig} from '../config/config.js';
 import {LighthouseError} from '../lib/lh-error.js';
@@ -34,10 +34,9 @@ async function startTimespanGather(page, options = {}) {
   log.setLevel(flags.logLevel || 'error');
 
   const {resolvedConfig} = await initializeConfig('timespan', config, flags);
-  const {promise: waitForCrash, rej: crashRej} = getRejectionCallback();
-
   const driver = new Driver(page);
-  await driver.connect(crashRej);
+  const fatalRejectionPromise = driver.fatalRejection.promise;
+  await driver.connect();
 
   /** @type {Map<string, LH.ArbitraryEqualityMap>} */
   const computedCache = new Map();
@@ -99,7 +98,7 @@ async function startTimespanGather(page, options = {}) {
       };
 
       const runnerGatherPromise = Runner.gather(gatherFn, runnerOptions);
-      const artifactsOrError = await Promise.race([waitForCrash, runnerGatherPromise]);
+      const artifactsOrError = await Promise.race([runnerGatherPromise, fatalRejectionPromise]);
       if (artifactsOrError instanceof LighthouseError) {
         return Promise.reject(artifactsOrError);
       }

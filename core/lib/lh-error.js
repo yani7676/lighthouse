@@ -94,8 +94,6 @@ const UIStrings = {
 
   /** Error message explaining that the browser tab that Lighthouse is inspecting has crashed. */
   targetCrashed: 'Browser tab has unexpectedly crashed.',
-  /** Error message explaining that the connection to the browser tab has broken. */
-  targetDetached: 'Protocol connection to the browser tab has unexpectedly broken.',
 };
 
 const str_ = i18n.createIcuMessageFn(import.meta.url, UIStrings);

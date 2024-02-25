@@ -13,7 +13,6 @@ import {
   mockRunnerModule,
 } from './mock-driver.js';
 import {fnAny} from '../test-utils.js';
-import {getRejectionCallback} from '../../gather/runner-helpers.js';
 import {networkRecordsToDevtoolsLog} from '../network-records-to-devtools-log.js';
 import {Runner as runnerActual} from '../../runner.js';
 import {defaultSettings} from '../../config/constants.js';
@@ -35,9 +34,6 @@ const TraceGatherer = (await import('../../gather/gatherers/trace.js')).default;
 const {initializeConfig} = await import('../../config/config.js');
 
 /** @typedef {{meta: LH.Gatherer.GathererMeta<'Accessibility'>, getArtifact: Mock<any, any>, startInstrumentation: Mock<any, any>, stopInstrumentation: Mock<any, any>, startSensitiveInstrumentation: Mock<any, any>, stopSensitiveInstrumentation:  Mock<any, any>}} MockGatherer */
-
-const {rej: crashRej} = getRejectionCallback();
-
 
 describe('NavigationRunner', () => {
   let requestedUrl = '';
@@ -129,12 +125,12 @@ describe('NavigationRunner', () => {
     });
 
     it('should connect the driver', async () => {
-      await runner._setup({driver, crashRej, resolvedConfig, requestor: requestedUrl});
+      await runner._setup({driver, resolvedConfig, requestor: requestedUrl});
       expect(mockDriver.connect).toHaveBeenCalled();
     });
 
     it('should navigate to the blank page if requestor is a string', async () => {
-      await runner._setup({driver, crashRej, resolvedConfig, requestor: requestedUrl});
+      await runner._setup({driver, resolvedConfig, requestor: requestedUrl});
       expect(mocks.navigationMock.gotoURL).toHaveBeenCalledTimes(1);
       expect(mocks.navigationMock.gotoURL).toHaveBeenCalledWith(
         expect.anything(),
@@ -146,7 +142,6 @@ describe('NavigationRunner', () => {
     it('skip about:blank if using callback requestor', async () => {
       await runner._setup({
         driver,
-        crashRej,
         resolvedConfig,
         requestor: () => {},
       });
@@ -158,7 +153,6 @@ describe('NavigationRunner', () => {
 
       await runner._setup({
         driver,
-        crashRej,
         resolvedConfig,
         requestor: requestedUrl,
       });
@@ -167,7 +161,7 @@ describe('NavigationRunner', () => {
 
     it('should collect base artifacts', async () => {
       const {baseArtifacts} =
-        await runner._setup({driver, crashRej, resolvedConfig, requestor: requestedUrl});
+        await runner._setup({driver, resolvedConfig, requestor: requestedUrl});
       expect(baseArtifacts).toMatchObject({
         URL: {
           finalDisplayedUrl: '',
@@ -176,14 +170,14 @@ describe('NavigationRunner', () => {
     });
 
     it('should prepare the target for navigation', async () => {
-      await runner._setup({driver, crashRej, resolvedConfig, requestor: requestedUrl});
+      await runner._setup({driver, resolvedConfig, requestor: requestedUrl});
       expect(mocks.prepareMock.prepareTargetForNavigationMode).toHaveBeenCalledTimes(1);
     });
 
     it('should prepare the target for navigation *after* base artifact collection', async () => {
       mockDriver._executionContext.evaluate.mockReset();
       mockDriver._executionContext.evaluate.mockRejectedValue(new Error('Not available'));
-      const setupPromise = runner._setup({driver, crashRej, resolvedConfig, requestor: requestedUrl});
+      const setupPromise = runner._setup({driver, resolvedConfig, requestor: requestedUrl});
       await expect(setupPromise).rejects.toThrowError(/Not available/);
       expect(mocks.prepareMock.prepareTargetForNavigationMode).not.toHaveBeenCalled();
     });

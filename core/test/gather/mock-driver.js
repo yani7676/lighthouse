@@ -35,7 +35,6 @@ function createMockSession() {
     off: fnAny(),
     addProtocolMessageListener: createMockOnFn(),
     removeProtocolMessageListener: fnAny(),
-    listenForCrashes: fnAny(),
     dispose: fnAny(),
 
     /** @return {LH.Gatherer.ProtocolSession} */
@@ -157,6 +156,12 @@ function createMockDriver() {
   const context = createMockExecutionContext();
   const targetManager = createMockTargetManager(session);
 
+  // fatalRejection
+  let rej;
+  const promise = new Promise((_, theRej) => {
+    rej = theRej;
+  });
+
   return {
     _page: page,
     _executionContext: context,
@@ -171,6 +176,8 @@ function createMockDriver() {
       fetchResource: fnAny(),
     },
     networkMonitor: new NetworkMonitor(targetManager.asTargetManager()),
+    listenForCrashes: fnAny(),
+    fatalRejection: {promise, rej},
 
     /** @return {Driver} */
     asDriver() {

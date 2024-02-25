@@ -6,6 +6,7 @@
 
 import EventEmitter from 'events';
 
+import {LighthouseError} from '../lib/lh-error.js';
 
 // Controls how long to wait for a response after sending a DevTools protocol command.
 const DEFAULT_PROTOCOL_TIMEOUT = 30000;
@@ -114,7 +115,6 @@ class ProtocolSession extends CrdpEventEmitter {
       if (timeout) clearTimeout(timeout);
     });
   }
-
 
   /**
    * Disposes of a session so that it can no longer talk to Chrome.

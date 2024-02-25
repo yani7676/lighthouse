@@ -28,7 +28,6 @@ const throwingSession = {
   off: throwNotConnectedFn,
   sendCommand: throwNotConnectedFn,
   dispose: throwNotConnectedFn,
-  listenForCrashes: throwNotConnectedFn,
 };
 
 /** @implements {LH.Gatherer.Driver} */
@@ -48,6 +47,7 @@ class Driver {
     this._fetcher = undefined;
 
     this.defaultSession = throwingSession;
+    this.fatalRejection = this.getRejectionCallback();
   }
 
   /** @return {LH.Gatherer.Driver['executionContext']} */
@@ -77,11 +77,8 @@ class Driver {
   }
 
 
-  /**
-   * @param {((reason?: any) => void) | undefined} crashRej
-   * @return {Promise<void>}
-   */
-  async connect(crashRej = () => {}) {
+  /** @return {Promise<void>} */
+  async connect() {
     if (this.defaultSession !== throwingSession) return;
     const status = {msg: 'Connecting to browser', id: 'lh:driver:connect'};
     log.time(status);
@@ -91,7 +88,7 @@ class Driver {
     this._networkMonitor = new NetworkMonitor(this._targetManager);
     await this._networkMonitor.enable();
     this.defaultSession = this._targetManager.rootSession();
-    this.defaultSession.listenForCrashes(crashRej);
+    this.listenForCrashes();
     this._executionContext = new ExecutionContext(this.defaultSession);
     this._fetcher = new Fetcher(this.defaultSession);
     log.timeEnd(status);
@@ -99,7 +96,6 @@ class Driver {
 
   /**
    * Sometimes, assigning the rejection callback lazily leads to more readable async code.
-   * @returns {{promise: Promise<any>, rej: (reason?: any) => void}}}
    */
   getRejectionCallback() {
     /** @type {(reason?: any) => void} */
@@ -116,15 +112,14 @@ class Driver {
    *
    * FWIW, if the target unexpectedly detaches (eg the user closed the tab), pptr will
    * catch that and reject into our this._cdpSession.send, which we'll alrady handle appropriately
-   * @param {(reason?: any) => void} crashRej
    * @return {void}
    */
-  listenForCrashes(crashRej) {
+  listenForCrashes() {
     this.defaultSession.on('Inspector.targetCrashed', async _ => {
       log.error('Session', 'Inspector.targetCrashed', this.defaultSession);
       // Manually detach so no more CDP traffic is attempted.
-      this.defaultSession.dispose();
-      crashRej(new LighthouseError(LighthouseError.errors.TARGET_CRASHED));
+      this.disconnect();
+      this.fatalRejection.rej(new LighthouseError(LighthouseError.errors.TARGET_CRASHED));
     });
   }
 
