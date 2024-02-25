@@ -34,7 +34,7 @@ async function startTimespanGather(page, options = {}) {
   log.setLevel(flags.logLevel || 'error');
 
   const {resolvedConfig} = await initializeConfig('timespan', config, flags);
-  const {promise: crashP, rej: crashRej} = getRejectionCallback();
+  const {promise: waitForCrash, rej: crashRej} = getRejectionCallback();
 
   const driver = new Driver(page);
   await driver.connect(crashRej);
@@ -98,8 +98,8 @@ async function startTimespanGather(page, options = {}) {
         return finalizeArtifacts(baseArtifacts, artifacts);
       };
 
-      const runnerGatherP = Runner.gather(gatherFn, runnerOptions);
-      const artifactsOrError = await Promise.race([crashP, runnerGatherP]);
+      const runnerGatherPromise = Runner.gather(gatherFn, runnerOptions);
+      const artifactsOrError = await Promise.race([waitForCrash, runnerGatherPromise]);
       if (artifactsOrError instanceof LighthouseError) {
         return Promise.reject(artifactsOrError);
       }

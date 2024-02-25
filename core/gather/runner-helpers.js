@@ -176,25 +176,9 @@ async function awaitArtifacts(artifactState) {
   return artifacts;
 }
 
-
-/**
- * Sometimes, assigning the rejection callback lazily leads to more readable async code.
- * @returns {{promise: Promise<any>, rej: (reason?: any) => void}}}
- */
-function getRejectionCallback() {
-  /** @type {(reason?: any) => void} */
-  let rej;
-  const promise = new Promise((_, theRej) => {
-    rej = theRej;
-  });
-  // @ts-expect-error Used before assigned? Pshaw! ↑
-  return {promise, rej};
-}
-
 export {
   getEmptyArtifactState,
   awaitArtifacts,
   collectPhaseArtifacts,
   collectArtifactDependencies,
-  getRejectionCallback,
 };

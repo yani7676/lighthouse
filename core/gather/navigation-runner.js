@@ -9,7 +9,7 @@ import log from 'lighthouse-logger';
 
 import {Driver} from './driver.js';
 import {Runner} from '../runner.js';
-import {getEmptyArtifactState, collectPhaseArtifacts, awaitArtifacts, getRejectionCallback} from './runner-helpers.js';
+import {getEmptyArtifactState, collectPhaseArtifacts, awaitArtifacts} from './runner-helpers.js';
 import * as prepare from './driver/prepare.js';
 import {gotoURL} from './driver/navigation.js';
 import * as storage from './driver/storage.js';
@@ -277,7 +277,7 @@ async function navigationGather(page, requestor, options = {}) {
   const isCallback = typeof requestor === 'function';
 
   const runnerOptions = {resolvedConfig, computedCache};
-  const {promise: crashP, rej: crashRej} = getRejectionCallback();
+  const {promise: waitForCrash, rej: crashRej} = getRejectionCallback();
 
   const gatherFn = async () => {
     const normalizedRequestor = isCallback ? requestor : UrlUtils.normalizeUrl(requestor);
@@ -317,8 +317,8 @@ async function navigationGather(page, requestor, options = {}) {
 
     return finalizeArtifacts(baseArtifacts, artifacts);
   };
-  const runnerGatherP = Runner.gather(gatherFn, runnerOptions);
-  const artifactsOrError = await Promise.race([crashP, runnerGatherP]);
+  const runnerGatherPromise = Runner.gather(gatherFn, runnerOptions);
+  const artifactsOrError = await Promise.race([waitForCrash, runnerGatherPromise]);
   if (artifactsOrError instanceof LighthouseError) {
     return Promise.reject(artifactsOrError);
   }

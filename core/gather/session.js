@@ -6,9 +6,6 @@
 
 import EventEmitter from 'events';
 
-import log from 'lighthouse-logger';
-
-import {LighthouseError} from '../lib/lh-error.js';
 
 // Controls how long to wait for a response after sending a DevTools protocol command.
 const DEFAULT_PROTOCOL_TIMEOUT = 30000;
@@ -118,22 +115,6 @@ class ProtocolSession extends CrdpEventEmitter {
     });
   }
 
-  /**
-   * If the target crashes, we can't continue gathering.
-   *
-   * FWIW, if the target unexpectedly detaches (eg the user closed the tab), pptr will
-   * catch that and reject into our this._cdpSession.send, which we'll alrady handle appropriately
-   * @param {(reason?: any) => void} crashRej
-   * @return {void}
-   */
-  listenForCrashes(crashRej) {
-    this.on('Inspector.targetCrashed', async _ => {
-      log.error('Session', 'Inspector.targetCrashed', this._targetInfo);
-      // Manually detach so no more CDP traffic is attempted.
-      this.dispose();
-      crashRej(new LighthouseError(LighthouseError.errors.TARGET_CRASHED));
-    });
-  }
 
   /**
    * Disposes of a session so that it can no longer talk to Chrome.

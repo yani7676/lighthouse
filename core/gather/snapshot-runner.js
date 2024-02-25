@@ -28,7 +28,7 @@ async function snapshotGather(page, options = {}) {
   /** @type {Map<string, LH.ArbitraryEqualityMap>} */
   const computedCache = new Map();
 
-  const {promise: crashP, rej: crashRej} = getRejectionCallback();
+  const {promise: waitForCrash, rej: crashRej} = getRejectionCallback();
   await driver.connect(crashRej);
   const url = await driver.url();
 
@@ -61,8 +61,8 @@ async function snapshotGather(page, options = {}) {
     return finalizeArtifacts(baseArtifacts, artifacts);
   };
 
-  const runnerGatherP = Runner.gather(gatherFn, runnerOptions);
-  const artifactsOrError = await Promise.race([crashP, runnerGatherP]);
+  const runnerGatherPromise = Runner.gather(gatherFn, runnerOptions);
+  const artifactsOrError = await Promise.race([waitForCrash, runnerGatherPromise]);
   if (artifactsOrError instanceof LighthouseError) {
     return Promise.reject(artifactsOrError);
   }

@@ -8,6 +8,7 @@ import log from 'lighthouse-logger';
 
 import {ExecutionContext} from './driver/execution-context.js';
 import {TargetManager} from './driver/target-manager.js';
+import {LighthouseError} from '../lib/lh-error.js';
 import {Fetcher} from './fetcher.js';
 import {NetworkMonitor} from './driver/network-monitor.js';
 
@@ -95,6 +96,38 @@ class Driver {
     this._fetcher = new Fetcher(this.defaultSession);
     log.timeEnd(status);
   }
+
+  /**
+   * Sometimes, assigning the rejection callback lazily leads to more readable async code.
+   * @returns {{promise: Promise<any>, rej: (reason?: any) => void}}}
+   */
+  getRejectionCallback() {
+    /** @type {(reason?: any) => void} */
+    let rej;
+    const promise = new Promise((_, theRej) => {
+      rej = theRej;
+    });
+    // @ts-expect-error Used before assigned? Pshaw! ↑
+    return {promise, rej};
+  }
+
+  /**
+   * If the target crashes, we can't continue gathering.
+   *
+   * FWIW, if the target unexpectedly detaches (eg the user closed the tab), pptr will
+   * catch that and reject into our this._cdpSession.send, which we'll alrady handle appropriately
+   * @param {(reason?: any) => void} crashRej
+   * @return {void}
+   */
+  listenForCrashes(crashRej) {
+    this.defaultSession.on('Inspector.targetCrashed', async _ => {
+      log.error('Session', 'Inspector.targetCrashed', this.defaultSession);
+      // Manually detach so no more CDP traffic is attempted.
+      this.defaultSession.dispose();
+      crashRej(new LighthouseError(LighthouseError.errors.TARGET_CRASHED));
+    });
+  }
+
 
   /** @return {Promise<void>} */
   async disconnect() {
