@@ -184,10 +184,22 @@ class Runner {
    * and -GA will run everything plus save artifacts and lhr to disk.
    *
    * @param {(runnerData: {resolvedConfig: LH.Config.ResolvedConfig}) => Promise<LH.Artifacts>} gatherFn
-   * @param {{resolvedConfig: LH.Config.ResolvedConfig, computedCache: Map<string, ArbitraryEqualityMap>}} options
+   * @param {{resolvedConfig: LH.Config.ResolvedConfig, computedCache: Map<string, ArbitraryEqualityMap>, fatalRejectionPromise: Promise}} options
    * @return {Promise<LH.Artifacts>}
    */
   static async gather(gatherFn, options) {
+
+
+    /**
+   * User can run -G solo, -A solo, or -GA together
+   * -G and -A will run partial lighthouse pipelines,
+   * and -GA will run everything plus save artifacts and lhr to disk.
+   *
+   * @param {(runnerData: {resolvedConfig: LH.Config.ResolvedConfig}) => Promise<LH.Artifacts>} gatherFn
+   * @param {{resolvedConfig: LH.Config.ResolvedConfig, computedCache: Map<string, ArbitraryEqualityMap>, fatalRejectionPromise: Promise}} options
+   * @return {Promise<LH.Artifacts>}
+   */
+  static async innerGather(gatherFn, options) {
     const settings = options.resolvedConfig.settings;
 
     // Either load saved artifacts from disk or from the browser.
@@ -199,36 +211,42 @@ class Runner {
         data: sentryContext,
       });
 
-      /** @type {LH.Artifacts} */
-      let artifacts;
+      // /** @type {LH.Artifacts} */
+      // let artifacts;
       if (settings.auditMode && !settings.gatherMode) {
         // No browser required, just load the artifacts from disk.
         const path = this._getDataSavePath(settings);
-        artifacts = assetSaver.loadArtifacts(path);
-      } else {
-        const runnerStatus = {msg: 'Gather phase', id: 'lh:runner:gather'};
-        log.time(runnerStatus, 'verbose');
+        return assetSaver.loadArtifacts(path);
+      }
 
-        artifacts = await gatherFn({
-          resolvedConfig: options.resolvedConfig,
-        });
+      const runnerStatus = {msg: 'Gather phase', id: 'lh:runner:gather'};
+      log.time(runnerStatus, 'verbose');
 
+      const gatherFnPromise = gatherFn({resolvedConfig: options.resolvedConfig});
+      const artifactsOrError = await Promise.race([gatherFnPromise, options.fatalRejectionPromise]);
+      if (artifactsOrError instanceof LighthouseError) {
+        console.log('DUDDDDDDDDDDE')
         log.timeEnd(runnerStatus);
+        // TODO: should be a throw??
+        return Promise.reject(artifactsOrError);
+      }
+      const artifacts = /** @type {LH.Artifacts} */ (artifactsOrError);
+      log.timeEnd(runnerStatus);
 
-        // If `gather` is run multiple times before `audit`, the timing entries for each `gather` can pollute one another.
-        // We need to clear the timing entries at the end of gathering.
-        // Set artifacts.Timing again to ensure lh:runner:gather is included.
-        artifacts.Timing = log.takeTimeEntries();
+      // If `gather` is run multiple times before `audit`, the timing entries for each `gather` can pollute one another.
+      // We need to clear the timing entries at the end of gathering.
+      // Set artifacts.Timing again to ensure lh:runner:gather is included.
+      artifacts.Timing = log.takeTimeEntries();
 
-        // -G means save these to disk (e.g. ./latest-run).
-        if (settings.gatherMode) {
-          const path = this._getDataSavePath(settings);
-          await assetSaver.saveArtifacts(artifacts, path);
-        }
+      // -G means save these to disk (e.g. ./latest-run).
+      if (settings.gatherMode) {
+        const path = this._getDataSavePath(settings);
+        await assetSaver.saveArtifacts(artifacts, path);
       }
 
       return artifacts;
     } catch (err) {
+      console.error('CREATING RUNNER ERROR');
       throw Runner.createRunnerError(err, settings);
     }
   }

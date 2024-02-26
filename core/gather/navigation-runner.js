@@ -277,7 +277,7 @@ async function navigationGather(page, requestor, options = {}) {
   const isCallback = typeof requestor === 'function';
 
   let fatalRejectionPromise = new Promise((_) => {});
-  const runnerOptions = {resolvedConfig, computedCache};
+  const runnerOptions = {resolvedConfig, computedCache, fatalRejectionPromise};
   const gatherFn = async () => {
     const normalizedRequestor = isCallback ? requestor : UrlUtils.normalizeUrl(requestor);
 
@@ -316,12 +316,8 @@ async function navigationGather(page, requestor, options = {}) {
 
     return finalizeArtifacts(baseArtifacts, artifacts);
   };
-  const runnerGatherPromise = Runner.gather(gatherFn, runnerOptions);
-  const artifactsOrError = await Promise.race([runnerGatherPromise, fatalRejectionPromise]);
-  if (artifactsOrError instanceof LighthouseError) {
-    return Promise.reject(artifactsOrError);
-  }
-  const artifacts = /** @type {LH.Artifacts} */ (artifactsOrError);
+  runnerOptions.fatalRejectionPromise = fatalRejectionPromise;
+  const artifacts = await Runner.gather(gatherFn, runnerOptions);
   return {artifacts, runnerOptions};
 }
 
