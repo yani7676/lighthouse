@@ -156,7 +156,7 @@ function createMockDriver() {
   const context = createMockExecutionContext();
   const targetManager = createMockTargetManager(session);
 
-  // fatalRejection
+  // our `fatalRejection`
   let rej;
   const promise = new Promise((_, theRej) => {
     rej = theRej;

@@ -47,7 +47,7 @@ class Driver {
     this._fetcher = undefined;
 
     this.defaultSession = throwingSession;
-    this.fatalRejection = this.getRejectionCallback();
+    this.fatalRejection = Driver.getRejectionCallback();
   }
 
   /** @return {LH.Gatherer.Driver['executionContext']} */
@@ -96,7 +96,7 @@ class Driver {
   /**
    * Sometimes, assigning the rejection callback lazily leads to more readable async code.
    */
-  getRejectionCallback() {
+  static getRejectionCallback() {
     /** @type {(reason: Error) => void} */
     let rej;
     const promise = new Promise((_, theRej) => {
@@ -115,9 +115,10 @@ class Driver {
    */
   listenForCrashes() {
     this.defaultSession.on('Inspector.targetCrashed', async _ => {
-      log.error('Session', 'Inspector.targetCrashed', this.defaultSession);
+      log.error('Driver', 'Inspector.targetCrashed');
       // Manually detach so no more CDP traffic is attempted.
-      this.disconnect();
+      // Don't await, else our rejection will be a 'Target closed' protocol error on cross-talk CDP calls.
+      void this.defaultSession.dispose();
       this.fatalRejection.rej(new LighthouseError(LighthouseError.errors.TARGET_CRASHED));
     });
   }
