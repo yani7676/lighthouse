@@ -11,7 +11,6 @@ import {Runner} from '../runner.js';
 import {getEmptyArtifactState, collectPhaseArtifacts, awaitArtifacts} from './runner-helpers.js';
 import {enableAsyncStacks, prepareTargetForTimespanMode} from './driver/prepare.js';
 import {initializeConfig} from '../config/config.js';
-import {LighthouseError} from '../lib/lh-error.js';
 import {getBaseArtifacts, finalizeArtifacts} from './base-artifacts.js';
 import * as i18n from '../lib/i18n/i18n.js';
 
@@ -35,7 +34,7 @@ async function startTimespanGather(page, options = {}) {
 
   const {resolvedConfig} = await initializeConfig('timespan', config, flags);
   const driver = new Driver(page);
-  const fatalRejectionPromise = driver.fatalRejection.promise;
+  const fatalGatherPromise = driver.fatalRejection.promise;
   await driver.connect();
 
   /** @type {Map<string, LH.ArbitraryEqualityMap>} */
@@ -73,7 +72,7 @@ async function startTimespanGather(page, options = {}) {
     async endTimespanGather() {
       const finalDisplayedUrl = await driver.url();
 
-      const runnerOptions = {resolvedConfig, computedCache};
+      const runnerOptions = {resolvedConfig, computedCache, fatalGatherPromise};
       const gatherFn = async () => {
         baseArtifacts.URL = {finalDisplayedUrl};
 
@@ -97,12 +96,7 @@ async function startTimespanGather(page, options = {}) {
         return finalizeArtifacts(baseArtifacts, artifacts);
       };
 
-      const runnerGatherPromise = Runner.gather(gatherFn, runnerOptions);
-      const artifactsOrError = await Promise.race([runnerGatherPromise, fatalRejectionPromise]);
-      if (artifactsOrError instanceof LighthouseError) {
-        return Promise.reject(artifactsOrError);
-      }
-      const artifacts = /** @type {LH.Artifacts} */ (artifactsOrError);
+      const artifacts = await Runner.gather(gatherFn, runnerOptions);
       return {artifacts, runnerOptions};
     },
   };

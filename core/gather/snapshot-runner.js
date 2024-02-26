@@ -10,7 +10,6 @@ import {Driver} from './driver.js';
 import {Runner} from '../runner.js';
 import {getEmptyArtifactState, collectPhaseArtifacts, awaitArtifacts} from './runner-helpers.js';
 import {initializeConfig} from '../config/config.js';
-import {LighthouseError} from '../lib/lh-error.js';
 import {getBaseArtifacts, finalizeArtifacts} from './base-artifacts.js';
 
 /**
@@ -26,11 +25,11 @@ async function snapshotGather(page, options = {}) {
   const driver = new Driver(page);
   await driver.connect();
   const url = await driver.url();
-  const fatalRejectionPromise = driver.fatalRejection.promise;
+  const fatalGatherPromise = driver.fatalRejection.promise;
 
   /** @type {Map<string, LH.ArbitraryEqualityMap>} */
   const computedCache = new Map();
-  const runnerOptions = {resolvedConfig, computedCache};
+  const runnerOptions = {resolvedConfig, computedCache, fatalGatherPromise};
 
   const gatherFn = async () => {
     const baseArtifacts =
@@ -59,12 +58,7 @@ async function snapshotGather(page, options = {}) {
     return finalizeArtifacts(baseArtifacts, artifacts);
   };
 
-  const runnerGatherPromise = Runner.gather(gatherFn, runnerOptions);
-  const artifactsOrError = await Promise.race([runnerGatherPromise, fatalRejectionPromise]);
-  if (artifactsOrError instanceof LighthouseError) {
-    return Promise.reject(artifactsOrError);
-  }
-  const artifacts = /** @type {LH.Artifacts} */ (artifactsOrError);
+  const artifacts = await Runner.gather(gatherFn, runnerOptions);
   return {artifacts, runnerOptions};
 }
 

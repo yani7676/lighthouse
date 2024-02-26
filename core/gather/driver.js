@@ -97,7 +97,7 @@ class Driver {
    * Sometimes, assigning the rejection callback lazily leads to more readable async code.
    */
   getRejectionCallback() {
-    /** @type {(reason?: any) => void} */
+    /** @type {(reason: Error) => void} */
     let rej;
     const promise = new Promise((_, theRej) => {
       rej = theRej;

@@ -184,7 +184,7 @@ class Runner {
    * and -GA will run everything plus save artifacts and lhr to disk.
    *
    * @param {(runnerData: {resolvedConfig: LH.Config.ResolvedConfig}) => Promise<LH.Artifacts>} gatherFn
-   * @param {{resolvedConfig: LH.Config.ResolvedConfig, computedCache: Map<string, ArbitraryEqualityMap>, fatalRejectionPromise: Promise}} options
+   * @param {{resolvedConfig: LH.Config.ResolvedConfig, computedCache: Map<string, ArbitraryEqualityMap>, fatalGatherPromise: Promise<void>}} options
    * @return {Promise<LH.Artifacts>}
    */
   static async gather(gatherFn, options) {
@@ -211,14 +211,10 @@ class Runner {
       log.time(runnerStatus, 'verbose');
 
       const gatherFnPromise = gatherFn({resolvedConfig: options.resolvedConfig});
-      const artifactsOrError = await Promise.race([gatherFnPromise, options.fatalRejectionPromise]);
-      if (artifactsOrError instanceof LighthouseError) {
-        console.log('DUDDDDDDDDDDE')
-        log.timeEnd(runnerStatus);
-        // TODO: should be a throw??
-        return Promise.reject(artifactsOrError);
-      }
-      const artifacts = /** @type {LH.Artifacts} */ (artifactsOrError);
+      // If the fatalGatherPromise rejects, we'll end up in the catch below.
+      // Therefore, `theArtifacts` will reliably be artifacts, despite the type inference.
+      const theArtifacts = await Promise.race([gatherFnPromise, options.fatalGatherPromise]);
+      const artifacts = /** @type {LH.Artifacts} */ (theArtifacts);
       log.timeEnd(runnerStatus);
 
       // If `gather` is run multiple times before `audit`, the timing entries for each `gather` can pollute one another.
@@ -234,7 +230,6 @@ class Runner {
 
       return artifacts;
     } catch (err) {
-      console.error('CREATING RUNNER ERROR');
       throw Runner.createRunnerError(err, settings);
     }
   }

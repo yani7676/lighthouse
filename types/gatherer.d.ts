@@ -51,7 +51,7 @@ declare module Gatherer {
     };
     networkMonitor: NetworkMonitor;
     listenForCrashes: (() => void);
-    fatalRejection: {promise: Promise<any>, rej: (reason?: any) => void}
+    fatalRejection: {promise: Promise<any>, rej: (reason: Error) => void}
   }
 
   interface Context<TDependencies extends DependencyKey = DefaultDependenciesKey> {
