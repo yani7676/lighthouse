@@ -295,6 +295,11 @@ async function navigationGather(page, requestor, options = {}) {
       page = lhPage;
     }
 
+    // setTimeout(() => {
+    //   void driver.disconnect();
+    //   driver.fatalRejection.rej(new LighthouseError(LighthouseError.errors.TARGET_CRASHED));
+    // }, 400);
+
     const driver = new Driver(page);
     fatalRejectionPromise = driver.fatalRejection.promise;
     const context = {

@@ -188,18 +188,6 @@ class Runner {
    * @return {Promise<LH.Artifacts>}
    */
   static async gather(gatherFn, options) {
-
-
-    /**
-   * User can run -G solo, -A solo, or -GA together
-   * -G and -A will run partial lighthouse pipelines,
-   * and -GA will run everything plus save artifacts and lhr to disk.
-   *
-   * @param {(runnerData: {resolvedConfig: LH.Config.ResolvedConfig}) => Promise<LH.Artifacts>} gatherFn
-   * @param {{resolvedConfig: LH.Config.ResolvedConfig, computedCache: Map<string, ArbitraryEqualityMap>, fatalRejectionPromise: Promise}} options
-   * @return {Promise<LH.Artifacts>}
-   */
-  static async innerGather(gatherFn, options) {
     const settings = options.resolvedConfig.settings;
 
     // Either load saved artifacts from disk or from the browser.
