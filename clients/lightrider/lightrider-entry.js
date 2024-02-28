@@ -96,11 +96,12 @@ async function runLighthouseInLR(connection, url, flags, lrOpts) {
     config = configOverride;
   } else {
     config = lrDevice === 'desktop' ? LR_PRESETS.desktop : LR_PRESETS.mobile;
-    config.settings = config.settings || {};
-    config.settings.ignoreStatusCode = ignoreStatusCode;
-    if (categoryIDs) {
-      config.settings.onlyCategories = categoryIDs;
-    }
+  }
+
+  config.settings = config.settings || {};
+  config.settings.ignoreStatusCode = ignoreStatusCode;
+  if (categoryIDs) {
+    config.settings.onlyCategories = categoryIDs;
   }
 
   try {
