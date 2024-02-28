@@ -4,13 +4,13 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import * as LH from '../../../types/lh.js';
+import * as Lantern from './types.js';
 import {BaseNode} from './base-node.js';
-import {NetworkRequest} from '../network-request.js';
+import {NetworkRequest} from './network-request.js';
 
 class NetworkNode extends BaseNode {
   /**
-   * @param {LH.Artifacts.NetworkRequest} networkRecord
+   * @param {Lantern.NetworkRequest} networkRecord
    */
   constructor(networkRecord) {
     super(networkRecord.requestId);
@@ -37,7 +37,7 @@ class NetworkNode extends BaseNode {
   }
 
   /**
-   * @return {LH.Artifacts.NetworkRequest}
+   * @return {Lantern.NetworkRequest}
    */
   get record() {
     return this._record;

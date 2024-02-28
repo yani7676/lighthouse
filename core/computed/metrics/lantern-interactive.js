@@ -7,7 +7,7 @@
 import {makeComputedArtifact} from '../computed-artifact.js';
 import {LanternMetric} from './lantern-metric.js';
 import {BaseNode} from '../../lib/dependency-graph/base-node.js';
-import {NetworkRequest} from '../../lib/network-request.js';
+import {NetworkRequest} from '../../lib/dependency-graph/network-request.js';
 import {LanternFirstMeaningfulPaint} from './lantern-first-meaningful-paint.js';
 
 /** @typedef {import('../../lib/dependency-graph/base-node.js').Node} Node */

@@ -12,7 +12,7 @@ const mocks = await mockDriverSubmodules();
 // https://github.com/GoogleChrome/lighthouse/blob/main/docs/hacking-tips.md#mocking-modules-with-testdouble
 /** @typedef {import('../../../gather/gatherers/script-elements.js').default} ScriptElements */
 const ScriptElements = (await import('../../../gather/gatherers/script-elements.js')).default;
-const {NetworkRequest} = await import('../../../lib/network-request.js');
+const {NetworkRequest} = await import('../../../lib/dependency-graph/network-request.js');
 
 /**
  * @param {Partial<LH.Artifacts.NetworkRequest>=} partial

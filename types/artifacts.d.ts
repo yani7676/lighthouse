@@ -11,7 +11,7 @@ import {LayoutShiftRootCausesData} from '@paulirish/trace_engine/models/trace/ro
 import {parseManifest} from '../core/lib/manifest-parser.js';
 import {Simulator} from '../core/lib/dependency-graph/simulator/simulator.js';
 import {LighthouseError} from '../core/lib/lh-error.js';
-import {NetworkRequest as _NetworkRequest} from '../core/lib/network-request.js';
+import {NetworkRequest as _NetworkRequest} from '../core/lib/dependency-graph/network-request.js';
 import speedline from 'speedline-core';
 import * as CDTSourceMap from '../core/lib/cdt/generated/SourceMap.js';
 import {ArbitraryEqualityMap} from '../core/lib/arbitrary-equality-map.js';

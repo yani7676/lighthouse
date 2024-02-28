@@ -17,7 +17,7 @@ import log from 'lighthouse-logger';
 
 import BaseGatherer from '../../base-gatherer.js';
 import UrlUtils from '../../../lib/url-utils.js';
-import {NetworkRequest} from '../../../lib/network-request.js';
+import {NetworkRequest} from '../../../lib/dependency-graph/network-request.js';
 import DevtoolsLog from '../devtools-log.js';
 import {fetchResponseBodyFromCache} from '../../driver/network.js';
 import {NetworkRecords} from '../../../computed/network-records.js';

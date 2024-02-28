@@ -7,7 +7,7 @@
 import {EntityClassification} from './entity-classification.js';
 import {makeComputedArtifact} from './computed-artifact.js';
 import {NetworkRecords} from './network-records.js';
-import {NetworkRequest} from '../lib/network-request.js';
+import {NetworkRequest} from '../lib/dependency-graph/network-request.js';
 import {Budget} from '../config/budget.js';
 import UrlUtils from '../lib/url-utils.js';
 

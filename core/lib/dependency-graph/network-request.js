@@ -52,8 +52,8 @@
       Trace: ResourceFinish.ts
  */
 
-import * as LH from '../../types/lh.js';
-import UrlUtils from './url-utils.js';
+import * as LH from '../../../types/lh.js';
+import UrlUtils from '../url-utils.js';
 
 // Lightrider X-Header names for timing information.
 // See: _updateTransferSizeForLightrider and _updateTimingsForLightrider.
@@ -569,7 +569,7 @@ class NetworkRequest {
   }
 
   /**
-   * @param {NetworkRequest} record
+   * @param {{protocol: string, parsedURL: ParsedURL}} record
    * @return {boolean}
    */
   static isNonNetworkRequest(record) {

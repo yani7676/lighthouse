@@ -7,7 +7,7 @@
 import assert from 'assert/strict';
 
 import CacheHeadersAudit from '../../../audits/byte-efficiency/uses-long-cache-ttl.js';
-import {NetworkRequest} from '../../../lib/network-request.js';
+import {NetworkRequest} from '../../../lib/dependency-graph/network-request.js';
 import {networkRecordsToDevtoolsLog} from '../../network-records-to-devtools-log.js';
 
 const options = CacheHeadersAudit.defaultOptions;

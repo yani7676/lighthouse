@@ -10,7 +10,7 @@
 
 
 import {ByteEfficiencyAudit} from './byte-efficiency-audit.js';
-import {NetworkRequest} from '../../lib/network-request.js';
+import {NetworkRequest} from '../../lib/dependency-graph/network-request.js';
 import {Sentry} from '../../lib/sentry.js';
 import UrlUtils from '../../lib/url-utils.js';
 import * as i18n from '../../lib/i18n/i18n.js';

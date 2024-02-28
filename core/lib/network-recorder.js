@@ -9,7 +9,7 @@ import {EventEmitter} from 'events';
 import log from 'lighthouse-logger';
 
 import * as LH from '../../types/lh.js';
-import {NetworkRequest} from './network-request.js';
+import {NetworkRequest} from './dependency-graph/network-request.js';
 import {PageDependencyGraph} from '../computed/page-dependency-graph.js';
 
 /**

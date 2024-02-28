@@ -9,7 +9,7 @@ import {getDomain} from 'tldts-icann';
 import {Util} from '../../shared/util.js';
 import {LighthouseError} from './lh-error.js';
 
-/** @typedef {import('./network-request.js').NetworkRequest} NetworkRequest */
+/** @typedef {import('./dependency-graph/network-request.js').NetworkRequest} NetworkRequest */
 
 const allowedProtocols = [
   'https:', 'http:', 'chrome:', 'chrome-extension:',

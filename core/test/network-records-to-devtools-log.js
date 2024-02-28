@@ -9,7 +9,7 @@ import assert from 'assert/strict';
 
 import {NetworkRecorder} from '../../core/lib/network-recorder.js';
 
-/** @typedef {import('../../core/lib/network-request.js').NetworkRequest} NetworkRequest */
+/** @typedef {import('../lib/dependency-graph/network-request.js').NetworkRequest} NetworkRequest */
 
 const idBase = '127122';
 const exampleUrl = 'https://testingurl.com/';

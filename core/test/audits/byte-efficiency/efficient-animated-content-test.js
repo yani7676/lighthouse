@@ -8,7 +8,7 @@ import assert from 'assert/strict';
 
 import EfficientAnimatedContent from
   '../../../audits/byte-efficiency/efficient-animated-content.js';
-import {NetworkRequest} from '../../../lib/network-request.js';
+import {NetworkRequest} from '../../../lib/dependency-graph/network-request.js';
 
 describe('Page uses videos for animated GIFs', () => {
   it('should flag gifs above 100kb as unoptimized', async () => {

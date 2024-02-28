@@ -8,7 +8,7 @@ import assert from 'assert/strict';
 
 import {PageDependencyGraph} from '../../computed/page-dependency-graph.js';
 import {BaseNode} from '../../lib/dependency-graph/base-node.js';
-import {NetworkRequest} from '../../lib/network-request.js';
+import {NetworkRequest} from '../../lib/dependency-graph/network-request.js';
 import {getURLArtifactFromDevtoolsLog, readJson} from '../test-utils.js';
 
 const sampleTrace = readJson('../fixtures/traces/iframe-m79.trace.json', import.meta);

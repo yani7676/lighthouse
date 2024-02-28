@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import {NetworkRequest} from '../../lib/network-request.js';
+import {NetworkRequest} from '../../lib/dependency-graph/network-request.js';
 
 /**
  * Return the body of the response with the given ID. Rejects if getting the

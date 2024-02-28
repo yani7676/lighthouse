@@ -6,7 +6,7 @@
 
 import {Audit} from './audit.js';
 import * as i18n from '../lib/i18n/i18n.js';
-import {NetworkRequest} from '../lib/network-request.js';
+import {NetworkRequest} from '../lib/dependency-graph/network-request.js';
 import {MainResource} from '../computed/main-resource.js';
 import {LanternLargestContentfulPaint} from '../computed/metrics/lantern-largest-contentful-paint.js';
 import {LoadSimulator} from '../computed/load-simulator.js';

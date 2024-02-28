@@ -5,7 +5,7 @@
  */
 
 import UrlUtils from '../lib/url-utils.js';
-import {NetworkRequest} from '../lib/network-request.js';
+import {NetworkRequest} from '../lib/dependency-graph/network-request.js';
 import {Audit} from './audit.js';
 import {CriticalRequestChains} from '../computed/critical-request-chains.js';
 import * as i18n from '../lib/i18n/i18n.js';

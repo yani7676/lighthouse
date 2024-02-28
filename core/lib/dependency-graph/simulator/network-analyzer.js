@@ -4,6 +4,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+import * as Lantern from '../types.js';
 import UrlUtils from '../../url-utils.js';
 
 const INITIAL_CWD = 14 * 1024;
@@ -31,8 +32,8 @@ class NetworkAnalyzer {
   }
 
   /**
-   * @param {LH.Artifacts.NetworkRequest[]} records
-   * @return {Map<string, LH.Artifacts.NetworkRequest[]>}
+   * @param {Lantern.NetworkRequest[]} records
+   * @return {Map<string, Lantern.NetworkRequest[]>}
    */
   static groupByOrigin(records) {
     const grouped = new Map();
@@ -87,10 +88,10 @@ class NetworkAnalyzer {
     return summaryByKey;
   }
 
-  /** @typedef {{record: LH.Artifacts.NetworkRequest, timing: LH.Crdp.Network.ResourceTiming, connectionReused?: boolean}} RequestInfo */
+  /** @typedef {{record: Lantern.NetworkRequest, timing: LH.Crdp.Network.ResourceTiming, connectionReused?: boolean}} RequestInfo */
 
   /**
-   * @param {LH.Artifacts.NetworkRequest[]} records
+   * @param {Lantern.NetworkRequest[]} records
    * @param {(e: RequestInfo) => number | number[] | undefined} iteratee
    * @return {Map<string, number[]>}
    */
@@ -249,7 +250,7 @@ class NetworkAnalyzer {
   /**
    * Given the RTT to each origin, estimates the observed server response times.
    *
-   * @param {LH.Artifacts.NetworkRequest[]} records
+   * @param {Lantern.NetworkRequest[]} records
    * @param {Map<string, number>} rttByOrigin
    * @return {Map<string, number[]>}
    */
@@ -270,7 +271,7 @@ class NetworkAnalyzer {
   }
 
   /**
-   * @param {LH.Artifacts.NetworkRequest[]} records
+   * @param {Lantern.NetworkRequest[]} records
    * @return {boolean}
    */
   static canTrustConnectionInformation(records) {
@@ -290,7 +291,7 @@ class NetworkAnalyzer {
    * Returns a map of requestId -> connectionReused, estimating the information if the information
    * available in the records themselves appears untrustworthy.
    *
-   * @param {LH.Artifacts.NetworkRequest[]} records
+   * @param {Lantern.NetworkRequest[]} records
    * @param {{forceCoarseEstimates: boolean}} [options]
    * @return {Map<string, boolean>}
    */
@@ -334,7 +335,7 @@ class NetworkAnalyzer {
    * Attempts to use the most accurate information first and falls back to coarser estimates when it
    * is unavailable.
    *
-   * @param {LH.Artifacts.NetworkRequest[]} records
+   * @param {Lantern.NetworkRequest[]} records
    * @param {RTTEstimateOptions} [options]
    * @return {Map<string, Summary>}
    */
@@ -415,7 +416,7 @@ class NetworkAnalyzer {
    * Estimates the server response time of each origin. RTT times can be passed in or will be
    * estimated automatically if not provided.
    *
-   * @param {LH.Artifacts.NetworkRequest[]} records
+   * @param {Lantern.NetworkRequest[]} records
    * @param {RTTEstimateOptions & {rttByOrigin?: Map<string, number>}} [options]
    * @return {Map<string, Summary>}
    */
@@ -441,7 +442,7 @@ class NetworkAnalyzer {
    * Excludes data URI, failed or otherwise incomplete, and cached requests.
    * Returns Infinity if there were no analyzable network records.
    *
-   * @param {Array<LH.Artifacts.NetworkRequest>} networkRecords
+   * @param {Array<Lantern.NetworkRequest>} networkRecords
    * @return {number}
    */
   static estimateThroughput(networkRecords) {
@@ -494,9 +495,9 @@ class NetworkAnalyzer {
   }
 
   /**
-   * @param {Array<LH.Artifacts.NetworkRequest>} records
+   * @param {Array<Lantern.NetworkRequest>} records
    * @param {string} resourceUrl
-   * @return {LH.Artifacts.NetworkRequest|undefined}
+   * @return {Lantern.NetworkRequest|undefined}
    */
   static findResourceForUrl(records, resourceUrl) {
     // equalWithExcludedFragments is expensive, so check that the resourceUrl starts with the request url first
@@ -507,9 +508,9 @@ class NetworkAnalyzer {
   }
 
   /**
-   * @param {Array<LH.Artifacts.NetworkRequest>} records
+   * @param {Array<Lantern.NetworkRequest>} records
    * @param {string} resourceUrl
-   * @return {LH.Artifacts.NetworkRequest|undefined}
+   * @return {Lantern.NetworkRequest|undefined}
    */
   static findLastDocumentForUrl(records, resourceUrl) {
     // equalWithExcludedFragments is expensive, so check that the resourceUrl starts with the request url first
@@ -526,8 +527,8 @@ class NetworkAnalyzer {
    * Resolves redirect chain given a main document.
    * See: {@link NetworkAnalyzer.findLastDocumentForUrl}) for how to retrieve main document.
    *
-   * @param {LH.Artifacts.NetworkRequest} request
-   * @return {LH.Artifacts.NetworkRequest}
+   * @param {Lantern.NetworkRequest} request
+   * @return {Lantern.NetworkRequest}
    */
   static resolveRedirects(request) {
     while (request.redirectDestination) request = request.redirectDestination;

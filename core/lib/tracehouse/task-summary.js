@@ -8,7 +8,7 @@
  * @fileoverview Utility functions for grouping and summarizing tasks.
  */
 
-import {NetworkRequest} from '../network-request.js';
+import {NetworkRequest} from '../dependency-graph/network-request.js';
 
 // These trace events, when not triggered by a script inside a particular task, are just general Chrome overhead.
 const BROWSER_TASK_NAMES_SET = new Set([

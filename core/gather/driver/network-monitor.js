@@ -15,7 +15,7 @@ import log from 'lighthouse-logger';
 
 import * as LH from '../../../types/lh.js';
 import {NetworkRecorder} from '../../lib/network-recorder.js';
-import {NetworkRequest} from '../../lib/network-request.js';
+import {NetworkRequest} from '../../lib/dependency-graph/network-request.js';
 import UrlUtils from '../../lib/url-utils.js';
 
 /** @typedef {import('../../lib/network-recorder.js').NetworkRecorderEventMap} NetworkRecorderEventMap */

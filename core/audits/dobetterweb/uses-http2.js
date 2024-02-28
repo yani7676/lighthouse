@@ -16,7 +16,7 @@ import {Audit} from '../audit.js';
 import {EntityClassification} from '../../computed/entity-classification.js';
 import UrlUtils from '../../lib/url-utils.js';
 import {LanternInteractive} from '../../computed/metrics/lantern-interactive.js';
-import {NetworkRequest} from '../../lib/network-request.js';
+import {NetworkRequest} from '../../lib/dependency-graph/network-request.js';
 import {NetworkRecords} from '../../computed/network-records.js';
 import {LoadSimulator} from '../../computed/load-simulator.js';
 import {PageDependencyGraph} from '../../computed/page-dependency-graph.js';

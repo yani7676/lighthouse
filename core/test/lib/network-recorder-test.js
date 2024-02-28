@@ -9,7 +9,7 @@ import assert from 'assert/strict';
 import {NetworkRecorder} from '../../lib/network-recorder.js';
 import {networkRecordsToDevtoolsLog} from '../network-records-to-devtools-log.js';
 import {readJson} from '../test-utils.js';
-import {NetworkRequest} from '../../lib/network-request.js';
+import {NetworkRequest} from '../../lib/dependency-graph/network-request.js';
 
 const devtoolsLogItems = readJson('../fixtures/artifacts/perflog/defaultPass.devtoolslog.json', import.meta);
 const prefetchedScriptDevtoolsLog = readJson('../fixtures/prefetched-script.devtoolslog.json', import.meta);

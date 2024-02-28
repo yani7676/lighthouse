@@ -13,7 +13,7 @@ import {Audit} from '../audit.js';
 import * as i18n from '../../lib/i18n/i18n.js';
 import {BaseNode} from '../../lib/dependency-graph/base-node.js';
 import {UnusedCSS} from '../../computed/unused-css.js';
-import {NetworkRequest} from '../../lib/network-request.js';
+import {NetworkRequest} from '../../lib/dependency-graph/network-request.js';
 import {ProcessedNavigation} from '../../computed/processed-navigation.js';
 import {LoadSimulator} from '../../computed/load-simulator.js';
 import {FirstContentfulPaint} from '../../computed/metrics/first-contentful-paint.js';
