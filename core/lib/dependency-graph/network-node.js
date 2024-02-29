@@ -4,13 +4,12 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import * as Lantern from './types.js';
 import {BaseNode} from './base-node.js';
 import {NetworkRequest} from './network-request.js';
 
 class NetworkNode extends BaseNode {
   /**
-   * @param {Lantern.NetworkRequest} networkRecord
+   * @param {NetworkRequest} networkRecord
    */
   constructor(networkRecord) {
     super(networkRecord.requestId);
@@ -37,7 +36,7 @@ class NetworkNode extends BaseNode {
   }
 
   /**
-   * @return {Lantern.NetworkRequest}
+   * @return {NetworkRequest}
    */
   get record() {
     return this._record;

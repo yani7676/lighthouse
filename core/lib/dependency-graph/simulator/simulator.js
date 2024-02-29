@@ -5,7 +5,7 @@
  */
 
 import * as LH from '../../../../types/lh.js';
-import * as Lantern from '../types.js';
+import {NetworkRequest} from '../network-request.js';
 import {BaseNode} from '../base-node.js';
 import {TcpConnection} from './tcp-connection.js';
 import {ConnectionPool} from './connection-pool.js';
@@ -102,7 +102,7 @@ class Simulator {
    * @param {Node} graph
    */
   _initializeConnectionPool(graph) {
-    /** @type {Lantern.NetworkRequest[]} */
+    /** @type {NetworkRequest[]} */
     const records = [];
     graph.getRootNode().traverse(node => {
       if (node.type === BaseNode.TYPES.NETWORK) {
@@ -191,7 +191,7 @@ class Simulator {
   }
 
   /**
-   * @param {Lantern.NetworkRequest} record
+   * @param {NetworkRequest} record
    * @return {?TcpConnection}
    */
   _acquireConnection(record) {
