@@ -20,7 +20,7 @@ See [Lighthouse Architecture](./docs/architecture.md), our overview and tour of 
 
 If you have a contribution for our [documentation](https://developer.chrome.com/docs/lighthouse/), please submit it in the [developer.chrome.com repo](https://github.com/GoogleChrome/developer.chrome.com). Otherwise, for contributions to this repo:
 
-1. First sign a Contributor License Agreement (see details below).
+1. First sign a Contributor License Agreement ([see details below](#sign-the-contributor-license-agreement)).
 1. If your issue has been discussed and it seems no one else is working on it, drop a note saying you plan to work take it. Feel free to ask questions. If your planned patch has no open issue already, it'd be best to first open an issue where you describe your idea and wait for us to give feedback.
 1. Fork the repo (unless you are a core contributor, then the preference is to use the main repo), develop and test your code changes.
 1. Ensure that your code adheres to the existing style in the sample to which you are contributing.
