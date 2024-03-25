@@ -634,7 +634,7 @@ class NetworkRequest {
       /^content-encoding$/i,
       /^x-content-encoding-over-network$/i,
     ];
-    const compressionTypes = ['gzip', 'br', 'deflate'];
+    const compressionTypes = ['gzip', 'br', 'deflate', 'zstd'];
     return record.responseHeaders.some(header =>
       patterns.some(p => header.name.match(p)) && compressionTypes.includes(header.value)
     );
