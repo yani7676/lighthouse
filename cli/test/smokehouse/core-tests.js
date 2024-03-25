@@ -61,10 +61,10 @@ import screenshot from './test-definitions/screenshot.js';
 import seoFailing from './test-definitions/seo-failing.js';
 import seoPassing from './test-definitions/seo-passing.js';
 import seoStatus403 from './test-definitions/seo-status-403.js';
-import seoTapTargets from './test-definitions/seo-tap-targets.js';
 import serviceWorkerReloaded from './test-definitions/service-worker-reloaded.js';
 import shiftAttribution from './test-definitions/shift-attribution.js';
 import sourceMaps from './test-definitions/source-maps.js';
+import tapTargets from './test-definitions/tap-targets.js';
 import timing from './test-definitions/timing.js';
 
 /** @type {ReadonlyArray<Smokehouse.TestDfn>} */
@@ -126,10 +126,10 @@ const smokeTests = [
   seoFailing,
   seoPassing,
   seoStatus403,
-  seoTapTargets,
   serviceWorkerReloaded,
   shiftAttribution,
   sourceMaps,
+  tapTargets,
   timing,
 ];
 

@@ -10,7 +10,7 @@ const BASE_URL = 'http://localhost:10200/seo/';
 const config = {
   extends: 'lighthouse:default',
   settings: {
-    onlyCategories: ['seo'],
+    onlyAudits: ['target-size'],
   },
 };
 
@@ -120,7 +120,7 @@ const expectations = {
     finalDisplayedUrl: BASE_URL + 'seo-tap-targets.html',
     requestedUrl: BASE_URL + 'seo-tap-targets.html',
     audits: {
-      'tap-targets': {
+      'target-size': {
         score: (() => {
           const totalTapTargets = expectedGatheredTapTargets.length;
           const passingTapTargets = expectedGatheredTapTargets.filter(t => !t.shouldFail).length;
@@ -130,7 +130,7 @@ const expectations = {
         details: {
           items: [
             {
-              'tapTarget': {
+              'node': {
                 'type': 'node',
                 /* eslint-disable max-len */
                 'snippet': '<a data-gathered-target="zero-width-tap-target-with-overflowing-child-content" style="display: block; width: 0; white-space: nowrap">',
@@ -138,73 +138,77 @@ const expectations = {
                 'selector': 'body > div > a',
                 'nodeLabel': 'zero width target',
               },
-              'overlappingTarget': {
-                'type': 'node',
-                /* eslint-disable max-len */
-                'snippet': '<a data-gathered-target="passing-tap-target-next-to-zero-width-target" style="display: block; width: 110px; height: 100px;background: #aaa;">',
-                'path': '2,HTML,1,BODY,14,DIV,1,A',
-                'selector': 'body > div > a',
-                'nodeLabel': 'passing target',
+              'subItems': {
+                'items': [{
+                  'relatedNode': {
+                    'type': 'node',
+                    /* eslint-disable max-len */
+                    'snippet': '<a data-gathered-target="passing-tap-target-next-to-zero-width-target" style="display: block; width: 110px; height: 100px;background: #aaa;">',
+                    'path': '2,HTML,1,BODY,14,DIV,1,A',
+                    'selector': 'body > div > a',
+                    'nodeLabel': 'passing target',
+                  },
+                }]
               },
-              'tapTargetScore': 864,
-              'overlappingTargetScore': 720,
-              'overlapScoreRatio': 0.8333333333333334,
-              'size': '110x18',
-              'width': 110,
-              'height': 18,
+              // 'tapTargetScore': 864,
+              // 'overlappingTargetScore': 720,
+              // 'overlapScoreRatio': 0.8333333333333334,
+              // 'size': '110x18',
+              // 'width': 110,
+              // 'height': 18,
             },
-            {
-              'tapTarget': {
-                'type': 'node',
-                'path': '2,HTML,1,BODY,10,DIV,0,DIV,1,A',
-                'selector': 'body > div > div > a',
-                'nodeLabel': 'too small target',
-              },
-              'overlappingTarget': {
-                'type': 'node',
-                'path': '2,HTML,1,BODY,10,DIV,0,DIV,2,A',
-                'selector': 'body > div > div > a',
-                'nodeLabel': 'big enough target',
-              },
-              'tapTargetScore': 1440,
-              'overlappingTargetScore': 432,
-              'overlapScoreRatio': 0.3,
-              'size': '100x30',
-              'width': 100,
-              'height': 30,
-            },
-            {
-              'tapTarget': {
-                'type': 'node',
-                'path': '2,HTML,1,BODY,3,DIV,24,A',
-                'selector': 'body > div > a',
-                'nodeLabel': 'left',
-              },
-              'overlappingTarget': {
-                'type': 'node',
-                'path': '2,HTML,1,BODY,3,DIV,25,A',
-                'selector': 'body > div > a',
-                'nodeLabel': 'right',
-              },
-              'tapTargetScore': 1920,
-              'overlappingTargetScore': 560,
-              'overlapScoreRatio': 0.2916666666666667,
-              'size': '40x40',
-              'width': 40,
-              'height': 40,
-            },
+            // {
+            //   'tapTarget': {
+            //     'type': 'node',
+            //     'path': '2,HTML,1,BODY,10,DIV,0,DIV,1,A',
+            //     'selector': 'body > div > div > a',
+            //     'nodeLabel': 'too small target',
+            //   },
+            //   'overlappingTarget': {
+            //     'type': 'node',
+            //     'path': '2,HTML,1,BODY,10,DIV,0,DIV,2,A',
+            //     'selector': 'body > div > div > a',
+            //     'nodeLabel': 'big enough target',
+            //   },
+            //   'tapTargetScore': 1440,
+            //   'overlappingTargetScore': 432,
+            //   'overlapScoreRatio': 0.3,
+            //   'size': '100x30',
+            //   'width': 100,
+            //   'height': 30,
+            // },
+            // {
+            //   'tapTarget': {
+            //     'type': 'node',
+            //     'path': '2,HTML,1,BODY,3,DIV,24,A',
+            //     'selector': 'body > div > a',
+            //     'nodeLabel': 'left',
+            //   },
+            //   'overlappingTarget': {
+            //     'type': 'node',
+            //     'path': '2,HTML,1,BODY,3,DIV,25,A',
+            //     'selector': 'body > div > a',
+            //     'nodeLabel': 'right',
+            //   },
+            //   'tapTargetScore': 1920,
+            //   'overlappingTargetScore': 560,
+            //   'overlapScoreRatio': 0.2916666666666667,
+            //   'size': '40x40',
+            //   'width': 40,
+            //   'height': 40,
+            // },
           ],
         },
       },
     },
   },
-  artifacts: {
-    TapTargets: expectedGatheredTapTargets.map(({node}) => ({node})),
-  },
+  // artifacts: {
+  //   TapTargets: expectedGatheredTapTargets.map(({node}) => ({node})),
+  // },
 };
 
 export default {
-  id: 'seo-tap-targets',
+  id: 'tap-targets',
   expectations,
   config,
 };

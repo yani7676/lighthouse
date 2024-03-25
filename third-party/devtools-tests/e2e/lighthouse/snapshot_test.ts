@@ -81,7 +81,7 @@ describe('Snapshot', function() {
       'html-has-lang',
       'label',
       'meta-description',
-      'tap-targets',
+      'target-size',
     ]);
 
     // These a11y violations are not present on initial page load.
