@@ -54,6 +54,16 @@ describe('Security: HTTPS audit', () => {
     });
   });
 
+  it('passes when insecure url redirects to a secure url', async () => {
+    const result = await Audit.audit(getArtifacts([
+      {requestId: '1', url: 'http://google.com/'},
+      {requestId: '1:redirect', url: 'https://google.com/'},
+      {requestId: '2', url: 'http://google.com/image.jpeg'},
+      {requestId: '2:redirect', url: 'https://google.com/image.jpeg'},
+    ]), {computedCache: new Map()});
+    assert.strictEqual(result.score, 1);
+  });
+
   it('augmented with mixed-content InspectorIssues', async () => {
     const networkRecords = [
       {url: 'https://google.com/', parsedURL: {scheme: 'https', host: 'google.com'}},
