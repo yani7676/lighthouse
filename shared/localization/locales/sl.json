@@ -236,15 +236,6 @@
   "core/audits/accessibility/document-title.js | title": {
     "message": "Dokument ima element `<title>`"
   },
-  "core/audits/accessibility/duplicate-id-active.js | description": {
-    "message": "Vsi elementi, ki jih je mogoče izbrati, morajo imeti enoličen atribut `id`, s čimer se zagotovi, da so vidni podpornim tehnologijam. [Preberite, kako odpravite težave s podvojenimi elementi`id`](https://dequeuniversity.com/rules/axe/4.8/duplicate-id-active)"
-  },
-  "core/audits/accessibility/duplicate-id-active.js | failureTitle": {
-    "message": "Toliko atributov aktivnih elementov, ki jih je mogoče izbrati, ni enoličnih: `[id]`"
-  },
-  "core/audits/accessibility/duplicate-id-active.js | title": {
-    "message": "Toliko atributov aktivnih elementov, ki jih je mogoče izbrati, je enoličnih: `[id]`"
-  },
   "core/audits/accessibility/duplicate-id-aria.js | description": {
     "message": "Vrednost ID-ja ARIA mora biti enolična, če želite preprečiti, da bi podporne tehnologije spregledale druge primerke. [Preberite, kako odpravite podvojene ID-je ARIA](https://dequeuniversity.com/rules/axe/4.8/duplicate-id-aria)."
   },

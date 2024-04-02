@@ -236,15 +236,6 @@
   "core/audits/accessibility/document-title.js | title": {
     "message": "المستند يحتوي على عنصر `<title>`"
   },
-  "core/audits/accessibility/duplicate-id-active.js | description": {
-    "message": "يجب أن يتوفر لكل العناصر التي يمكن التركيز عليها `id` فريدًا لضمان إمكانية وصول التكنولوجيا المساعِدة إليها. تعرَّف على [كيفية حلّ مشاكل `id` المكرّرة](https://dequeuniversity.com/rules/axe/4.8/duplicate-id-active)."
-  },
-  "core/audits/accessibility/duplicate-id-active.js | failureTitle": {
-    "message": "سمات `[id]` المتوفّرة في العناصر النشطة والقابلة للتركيز غير فريدة"
-  },
-  "core/audits/accessibility/duplicate-id-active.js | title": {
-    "message": "سمات `[id]` المتوفّرة في العناصر النشطة والقابلة للتركيز فريدة"
-  },
   "core/audits/accessibility/duplicate-id-aria.js | description": {
     "message": "يجب أن تكون قيمة رقم تعريف ARIA فريدة حتى لا تتجاهل التكنولوجيا المساعِدة الأمثلة الأخرى. تعرَّف على [كيفية حلّ مشكلة أرقام تعريف ARIA المكرَّرة](https://dequeuniversity.com/rules/axe/4.8/duplicate-id-aria)."
   },

@@ -236,15 +236,6 @@
   "core/audits/accessibility/document-title.js | title": {
     "message": "Il documento ha un elemento `<title>`"
   },
-  "core/audits/accessibility/duplicate-id-active.js | description": {
-    "message": "Tutti gli elementi attivabili devono avere un valore `id` univoco per garantirne la visibilità alle tecnologie per la disabilità. [Scopri come correggere i valori `id` duplicati](https://dequeuniversity.com/rules/axe/4.8/duplicate-id-active)."
-  },
-  "core/audits/accessibility/duplicate-id-active.js | failureTitle": {
-    "message": "Gli attributi `[id]` in elementi attivi per cui è possibile impostare lo stato attivo non sono univoci"
-  },
-  "core/audits/accessibility/duplicate-id-active.js | title": {
-    "message": "Gli attributi `[id]` in elementi attivi per cui è possibile impostare lo stato attivo sono univoci"
-  },
   "core/audits/accessibility/duplicate-id-aria.js | description": {
     "message": "Il valore di un ID ARIA deve essere univoco per evitare che altre istanze vengano ignorate dalle tecnologie per la disabilità. [Scopri come correggere gli ID ARIA duplicati](https://dequeuniversity.com/rules/axe/4.8/duplicate-id-aria)."
   },

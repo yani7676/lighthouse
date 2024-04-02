@@ -236,15 +236,6 @@
   "core/audits/accessibility/document-title.js | title": {
     "message": "Dokument enthält ein `<title>`-Element"
   },
-  "core/audits/accessibility/duplicate-id-active.js | description": {
-    "message": "Für alle fokussierbaren Elemente ist eine eindeutige `id` erforderlich, damit sie von Hilfstechnologien erkannt werden können. [Informationen zum Korrigieren doppelter `id`s.](https://dequeuniversity.com/rules/axe/4.8/duplicate-id-active)"
-  },
-  "core/audits/accessibility/duplicate-id-active.js | failureTitle": {
-    "message": "`[id]`-Attribute zu aktiven, fokussierbaren Elementen sind nicht eindeutig"
-  },
-  "core/audits/accessibility/duplicate-id-active.js | title": {
-    "message": "`[id]`-Attribute zu aktiven, fokussierbaren Elementen sind eindeutig"
-  },
   "core/audits/accessibility/duplicate-id-aria.js | description": {
     "message": "Der Wert einer ARIA-ID muss eindeutig sein, damit andere Instanzen nicht von Hilfstechnologien übersehen werden. [Informationen zum Korrigieren doppelter ARIA-IDs.](https://dequeuniversity.com/rules/axe/4.8/duplicate-id-aria)"
   },

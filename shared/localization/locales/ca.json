@@ -236,15 +236,6 @@
   "core/audits/accessibility/document-title.js | title": {
     "message": "El document té un element `<title>`"
   },
-  "core/audits/accessibility/duplicate-id-active.js | description": {
-    "message": "Tots els elements enfocables han de tenir un `id` únic per garantir que les tecnologies assistencials els puguin veure. [Obtén informació sobre com pots corregir els `id` duplicats](https://dequeuniversity.com/rules/axe/4.8/duplicate-id-active)."
-  },
-  "core/audits/accessibility/duplicate-id-active.js | failureTitle": {
-    "message": "Els atributs `[id]` en elements actius en què es pot posar el focus no són únics"
-  },
-  "core/audits/accessibility/duplicate-id-active.js | title": {
-    "message": "Els atributs `[id]` en elements actius en què es pot posar el focus són únics"
-  },
   "core/audits/accessibility/duplicate-id-aria.js | description": {
     "message": "El valor d'un identificador ARIA ha de ser únic per impedir que les tecnologies assistencials passin per alt altres instàncies. [Obtén informació sobre com pots corregir els identificadors ARIA duplicats](https://dequeuniversity.com/rules/axe/4.8/duplicate-id-aria)."
   },
