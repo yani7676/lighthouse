@@ -9,6 +9,7 @@ import UrlUtils from '../lib/url-utils.js';
 import {NetworkRequest} from '../lib/network-request.js';
 import {NetworkRecords} from '../computed/network-records.js';
 import * as i18n from '../lib/i18n/i18n.js';
+import {MainResource} from '../computed/main-resource.js';
 
 const UIStrings = {
   /** Title of a Lighthouse audit that provides detail on the useage of HTTPS on a page. This descriptive title is shown to users when all requests on a page are fufilled using HTTPS. */
@@ -61,7 +62,7 @@ class HTTPS extends Audit {
       title: str_(UIStrings.title),
       failureTitle: str_(UIStrings.failureTitle),
       description: str_(UIStrings.description),
-      requiredArtifacts: ['devtoolsLogs', 'InspectorIssues'],
+      requiredArtifacts: ['devtoolsLogs', 'InspectorIssues', 'URL', 'GatherContext'],
     };
   }
 
@@ -71,11 +72,24 @@ class HTTPS extends Audit {
    * @return {Promise<LH.Audit.Product>}
    */
   static async audit(artifacts, context) {
-    const devtoolsLogs = artifacts.devtoolsLogs[Audit.DEFAULT_PASS];
-    const networkRecords = await NetworkRecords.request(devtoolsLogs, context);
+    const devtoolsLog = artifacts.devtoolsLogs[Audit.DEFAULT_PASS];
+    const networkRecords = await NetworkRecords.request(devtoolsLog, context);
+
+    /** @type {LH.Artifacts.NetworkRequest|undefined} */
+    let mainResource;
+    if (artifacts.GatherContext.gatherMode === 'navigation') {
+      mainResource = await MainResource.request({URL: artifacts.URL, devtoolsLog}, context);
+    }
+
     const insecureURLs = networkRecords
-      .filter(record => !record.redirectDestination)
-      .filter(record => !NetworkRequest.isSecureRequest(record))
+      .filter(record => {
+        // Ignore any requests that were redirects to the main document,
+        // but no the main document itself.
+        if (mainResource && record !== mainResource && mainResource.redirects?.includes(record)) {
+          return false;
+        }
+        return !NetworkRequest.isSecureRequest(record);
+      })
       .map(record => UrlUtils.elideDataURI(record.url));
 
     /** @type {Array<{url: string, resolution?: LH.IcuMessage|string}>}  */

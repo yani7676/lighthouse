@@ -10,11 +10,15 @@ import Audit from '../../audits/is-on-https.js';
 import {networkRecordsToDevtoolsLog} from '../network-records-to-devtools-log.js';
 
 describe('Security: HTTPS audit', () => {
-  function getArtifacts(networkRecords, mixedContentIssues) {
+  function getArtifacts(networkRecords, mixedContentIssues, mainDocumentUrl) {
     const devtoolsLog = networkRecordsToDevtoolsLog(networkRecords);
     return {
       devtoolsLogs: {[Audit.DEFAULT_PASS]: devtoolsLog},
       InspectorIssues: {mixedContentIssue: mixedContentIssues || []},
+      URL: {
+        mainDocumentUrl: mainDocumentUrl || networkRecords[0].url,
+      },
+      GatherContext: {gatherMode: 'navigation'},
     };
   }
 
@@ -54,14 +58,38 @@ describe('Security: HTTPS audit', () => {
     });
   });
 
-  it('passes when insecure url redirects to a secure url', async () => {
-    const result = await Audit.audit(getArtifacts([
+  it('passes when insecure main document redirects to a secure url', async () => {
+    const artifacts = getArtifacts([
       {requestId: '1', url: 'http://google.com/'},
       {requestId: '1:redirect', url: 'https://google.com/'},
+    ], null, 'https://google.com/');
+    const result = await Audit.audit(artifacts, {computedCache: new Map()});
+    assert.strictEqual(result.score, 1);
+  });
+
+  it('fails when insecure main document redirects to another insecure url', async () => {
+    const artifacts = getArtifacts([
+      {requestId: '1', url: 'http://google.com/'},
+      {requestId: '1:redirect', url: 'http://www.google.com/'},
+    ], null, 'http://www.google.com/');
+    const result = await Audit.audit(artifacts, {computedCache: new Map()});
+    assert.strictEqual(result.score, 0);
+    assert.deepStrictEqual(result.details.items.map(i => i.url), [
+      'http://www.google.com/',
+    ]);
+  });
+
+  it('fails when an insecure non-document request redirects to a secure url', async () => {
+    const artifacts = getArtifacts([
+      {requestId: '1', url: 'https://google.com/'},
       {requestId: '2', url: 'http://google.com/image.jpeg'},
       {requestId: '2:redirect', url: 'https://google.com/image.jpeg'},
-    ]), {computedCache: new Map()});
-    assert.strictEqual(result.score, 1);
+    ]);
+    const result = await Audit.audit(artifacts, {computedCache: new Map()});
+    assert.strictEqual(result.score, 0);
+    assert.deepStrictEqual(result.details.items.map(i => i.url), [
+      'http://google.com/image.jpeg',
+    ]);
   });
 
   it('augmented with mixed-content InspectorIssues', async () => {
