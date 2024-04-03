@@ -18,6 +18,10 @@ rm -rf /tmp/lighthouse-local-test || true
 mkdir -p /tmp/lighthouse-local-test
 cd /tmp/lighthouse-local-test
 
+echo "##################################"
+ls -l ./flow-report/assets
+echo "##################################"
+
 npm init -y
 npm install "$LH_ROOT/lighthouse-$VERSION.tgz"
 npm explore lighthouse -- npm run fast -- http://example.com --chrome-flags=--headless=new
