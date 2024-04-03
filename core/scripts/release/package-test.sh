@@ -19,7 +19,7 @@ mkdir -p /tmp/lighthouse-local-test
 cd /tmp/lighthouse-local-test
 
 echo "##################################"
-ls -l ./flow-report/assets
+ls -l ./node_modules/lighthouse/flow-report/assets
 echo "##################################"
 
 npm init -y
