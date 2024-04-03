@@ -7,6 +7,7 @@ set -euxo pipefail
 
 echo "Testing a fresh local install..."
 VERSION=$(node -e "console.log(require('./package.json').version)")
+git status
 npm pack
 
 # Start pristine's static-server for smokehouse run below.
