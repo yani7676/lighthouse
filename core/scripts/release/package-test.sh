@@ -10,6 +10,8 @@ VERSION=$(node -e "console.log(require('./package.json').version)")
 git status
 ls flow-report
 ls flow-report/assets
+
+
 npm pack
 
 # Start pristine's static-server for smokehouse run below.
