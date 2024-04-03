@@ -18,14 +18,15 @@ rm -rf /tmp/lighthouse-local-test || true
 mkdir -p /tmp/lighthouse-local-test
 cd /tmp/lighthouse-local-test
 
+npm init -y
+npm install "$LH_ROOT/lighthouse-$VERSION.tgz"
+
 echo "##################################"
 ls -l
 echo "##################################"
-ls -l ./node_modules/lighthouse/
+ls -l ./node_modules/lighthouse/flow-report/assets
 echo "##################################"
 
-npm init -y
-npm install "$LH_ROOT/lighthouse-$VERSION.tgz"
 npm explore lighthouse -- npm run fast -- http://example.com --chrome-flags=--headless=new
 
 # Packaged smokehouse/lighthouse using root's static-server and test fixtures.
