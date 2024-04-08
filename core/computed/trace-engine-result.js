@@ -32,7 +32,7 @@ class TraceEngineResult {
     ));
     // TODO: use TraceEngine.TraceProcessor.createWithAllHandlers above.
     return /** @type {import('@paulirish/trace_engine').Handlers.Types.TraceParseData} */(
-      engine.data);
+      engine.traceParsedData);
   }
 
   /**
