@@ -1,3 +1,40 @@
+<a name="11.7.1"></a>
+# 11.7.1 (2024-04-08)
+[Full Changelog](https://github.com/GoogleChrome/lighthouse/compare/v11.7.0...v11.7.1)
+
+We expect this release to ship in the DevTools of [Chrome 125](https://chromiumdash.appspot.com/schedule), and to PageSpeed Insights within 2 weeks.
+
+## New Contributors
+
+Thanks to our new contributors 👽🐷🐰🐯🐻!
+
+- lauren n. liberda @selfisekai
+
+## Core
+
+* network-request: recognize zstd compression algorithm ([#15883](https://github.com/GoogleChrome/lighthouse/pull/15883))
+* trace-elements: add sentry debugging for `impactedNodes` ([#15915](https://github.com/GoogleChrome/lighthouse/pull/15915))
+* trace-processor: correct overlapping tasks ([#15921](https://github.com/GoogleChrome/lighthouse/pull/15921))
+
+## Report
+
+* remove use of innerHTML to empty elements ([#15911](https://github.com/GoogleChrome/lighthouse/pull/15911))
+
+## Deps
+
+* upgrade `trace_engine` to 0.0.19 ([#15926](https://github.com/GoogleChrome/lighthouse/pull/15926))
+* upgrade axe-core to 4.9.0 ([#15887](https://github.com/GoogleChrome/lighthouse/pull/15887))
+
+## Tests
+
+* remove Access-Control-Allow-Origin for robots.txt ([#15895](https://github.com/GoogleChrome/lighthouse/pull/15895))
+* devtools: sync e2e ([#15917](https://github.com/GoogleChrome/lighthouse/pull/15917))
+
+## Misc
+
+* correct .npmignore for node >=18.20 ([#15924](https://github.com/GoogleChrome/lighthouse/pull/15924))
+* proto: ensure all strings are well-formed ([#15909](https://github.com/GoogleChrome/lighthouse/pull/15909))
+
 <a name="11.7.0"></a>
 # 11.7.0 (2024-03-20)
 [Full Changelog](https://github.com/GoogleChrome/lighthouse/compare/v11.6.0...v11.7.0)
