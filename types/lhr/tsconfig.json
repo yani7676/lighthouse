@@ -1,22 +1,10 @@
 {
+  "extends": "../../tsconfig-base.json",
   "compilerOptions": {
-    "module": "esnext",
-    "target": "esnext",
-    "esModuleInterop": true,
-    "moduleResolution": "node",
-
-    "strict": true,
-    "extendedDiagnostics": true,
-
-    // We only need the base JS definitions, no libs in node_modules, no DOM, etc.
+    // We only need the base JS definitions, no DOM, etc.
     "lib": ["esnext"],
+    // Don't include any types from node_modules/.
     "types": [],
-
-    // "listFiles": true,
-    // "noErrorTruncation": true,
-
-    "composite": true,
-    "outDir": "../../.tmp/tsbuildinfo/lhr",
   },
   "include": [
     "*.d.ts",

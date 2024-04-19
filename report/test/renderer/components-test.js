@@ -1,17 +1,15 @@
 /**
- * @license Copyright 2021 The Lighthouse Authors. All Rights Reserved.
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the License. You may obtain a copy of the License at http://www.apache.org/licenses/LICENSE-2.0
- * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific language governing permissions and limitations under the License.
+ * @license
+ * Copyright 2021 Google LLC
+ * SPDX-License-Identifier: Apache-2.0
  */
-'use strict';
-
-/* eslint-env jest */
 
 import fs from 'fs';
+
 import jsdom from 'jsdom';
-import expect from 'expect';
+
 import {DOM} from '../../renderer/dom.js';
-import {LH_ROOT} from '../../../root.js';
+import {LH_ROOT} from '../../../shared/root.js';
 import {normalizeTextNodeText} from '../../../build/build-report-components.js';
 
 const html = fs.readFileSync(LH_ROOT + '/report/assets/templates.html', 'utf-8');
@@ -83,8 +81,44 @@ async function assertDOMTreeMatches(tmplEl) {
   }
 }
 
-for (const tmpEl of tmplEls) {
-  it(`${tmpEl.id} component matches HTML source`, async () => {
-    await assertDOMTreeMatches(tmpEl);
+describe('Components', () => {
+  const originalCreateElement = DOM.prototype.createElement;
+  const originalCreateElementNS = DOM.prototype.createElementNS;
+
+  before(() => {
+    /**
+     * @param {string} classNames
+     */
+    function checkPrefix(classNames) {
+      if (!classNames) return;
+
+      for (const className of classNames.split(' ')) {
+        if (!className.startsWith('lh-')) {
+          throw new Error(`expected classname to start with lh-, got: ${className}`);
+        }
+      }
+    }
+
+    DOM.prototype.createElement = function(...args) {
+      const classNames = args[1];
+      checkPrefix(classNames);
+      return originalCreateElement.call(this, ...args);
+    };
+    DOM.prototype.createElementNS = function(...args) {
+      const classNames = args[2];
+      checkPrefix(classNames);
+      return originalCreateElementNS.call(this, ...args);
+    };
   });
-}
+
+  after(() => {
+    DOM.prototype.createElement = originalCreateElement;
+    DOM.prototype.createElementNS = originalCreateElementNS;
+  });
+
+  for (const tmpEl of tmplEls) {
+    it(`${tmpEl.id} component matches HTML source`, async () => {
+      await assertDOMTreeMatches(tmpEl);
+    });
+  }
+});

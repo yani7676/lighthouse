@@ -1,19 +1,17 @@
 /**
- * @license Copyright 2019 The Lighthouse Authors. All Rights Reserved.
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the License. You may obtain a copy of the License at http://www.apache.org/licenses/LICENSE-2.0
- * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific language governing permissions and limitations under the License.
+ * @license
+ * Copyright 2019 Google LLC
+ * SPDX-License-Identifier: Apache-2.0
  */
-'use strict';
 
-/* eslint-env jest */
-
-import {strict as assert} from 'assert';
+import assert from 'assert/strict';
 
 import jsdom from 'jsdom';
-import {Util} from '../../renderer/util.js';
-import {I18n} from '../../renderer/i18n.js';
+
+import {I18nFormatter} from '../../renderer/i18n-formatter.js';
 import {DOM} from '../../renderer/dom.js';
 import {SnippetRenderer} from '../../renderer/snippet-renderer.js';
+import {Globals} from '../../renderer/report-globals.js';
 
 /* Generates a snippet lines array like this (for a single range from 1 to 4):
   [
@@ -56,14 +54,18 @@ function makeSnippetDetails({
 describe('DetailsRenderer', () => {
   let dom;
 
-  beforeAll(() => {
-    Util.i18n = new I18n('en', {...Util.UIStrings});
+  before(() => {
+    Globals.apply({
+      providedStrings: {},
+      i18n: new I18nFormatter('en'),
+      reportJson: null,
+    });
     const {document} = new jsdom.JSDOM().window;
     dom = new DOM(document);
   });
 
-  afterAll(() => {
-    Util.i18n = undefined;
+  after(() => {
+    Globals.i18n = undefined;
   });
 
   function renderSnippet(details) {

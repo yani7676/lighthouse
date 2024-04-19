@@ -1,20 +1,30 @@
 /**
- * @license Copyright 2018 The Lighthouse Authors. All Rights Reserved.
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the License. You may obtain a copy of the License at http://www.apache.org/licenses/LICENSE-2.0
- * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific language governing permissions and limitations under the License.
+ * @license
+ * Copyright 2018 Google LLC
+ * SPDX-License-Identifier: Apache-2.0
  */
 
-import {Result as AuditResult} from './audit-result';
-import {ConfigSettings} from './settings';
+import {Result as AuditResult} from './audit-result.js';
+import AuditDetails from './audit-details.js';
+import {ConfigSettings} from './settings.js';
 
 /**
  * The full output of a Lighthouse run.
  */
 interface Result {
-  /** The URL that was supplied to Lighthouse and initially navigated to. */
-  requestedUrl: string;
-  /** The post-redirects URL that Lighthouse loaded. */
-  finalUrl: string;
+  /** Gather mode used to collect artifacts for this result. */
+  gatherMode: Result.GatherMode;
+  /** The URL that Lighthouse initially navigated to. Will be `undefined` in timespan/snapshot. */
+  requestedUrl?: string;
+  /** URL of the last document request during a Lighthouse navigation. Will be `undefined` in timespan/snapshot. */
+  mainDocumentUrl?: string;
+  /**
+   * For historical reasons, this will always be the same as `mainDocumentUrl`.
+   * @deprecated
+   */
+  finalUrl?: string;
+  /** The URL displayed on the page after Lighthouse finishes. */
+  finalDisplayedUrl: string;
   /** The ISO-8601 timestamp of when the results were generated. */
   fetchTime: string;
   /** The version of Lighthouse with which these results were generated. */
@@ -39,9 +49,17 @@ interface Result {
   /** Execution timings for the Lighthouse run */
   timing: Result.Timing;
   /** Strings for the report and the record of all formatted string locations in the LHR and their corresponding source values. */
-  i18n: {rendererFormattedStrings: Record<string, string>, icuMessagePaths?: Result.IcuMessagePaths};
+  i18n: {
+    rendererFormattedStrings: Record<string, string>;
+    /** Optional because LR has many old LHRs that return nothing for this property. */
+    icuMessagePaths?: Result.IcuMessagePaths;
+  };
   /** An array containing the result of all stack packs. */
   stackPacks?: Result.StackPack[];
+  /** All the origins encountered during this Lighthouse run, and information about what web property (aka "entity") they belong to. Won't be present for snapshot mode. */
+  entities?: Result.Entities;
+  /** Screenshot taken of the full page, with node rects referencing audit results. If there was an error with collection, this is null. If disabled via the disableFullPageScreenshot setting, this is undefined. */
+  fullPageScreenshot?: Result.FullPageScreenshot | null;
 }
 
 // Result namespace
@@ -54,7 +72,7 @@ declare module Result {
     /** The benchmark index number that indicates rough device class. */
     benchmarkIndex: number;
     /** The version of libraries with which these results were generated. Ex: axe-core. */
-    credits: Record<string, string>,
+    credits?: Record<string, string|undefined>,
   }
 
   interface Timing {
@@ -96,8 +114,6 @@ declare module Result {
     group?: string;
     /** The conventional acronym for the audit/metric. */
     acronym?: string;
-    /** Any audit IDs closely relevant to this one. */
-    relevantAudits?: string[];
   }
 
   interface ReportGroup {
@@ -123,6 +139,39 @@ declare module Result {
     descriptions: Record<string, string>;
   }
 
+  interface FullPageScreenshot {
+    screenshot: {
+      /** Base64 image data URL. */
+      data: string;
+      width: number;
+      height: number;
+    };
+    nodes: Record<string, {id?: string} & AuditDetails.Rect>;
+  }
+
+  /**
+   * Entity classification for the run, for resolving URLs/items to entities in report.
+   */
+  interface Entities extends Array<LhrEntity> {}
+
+  /**
+   * An entity that's either recognized by third-party-web or made up by Lighthouse.
+   */
+  interface LhrEntity {
+    /** Name of the entity. Maps to third-party-web unique name for recognized entities and a root domain name for the unrecognized. */
+    name: string;
+    /** Homepage URL for a recognized entity, if available in third-party-web. */
+    homepage?: string;
+    /** Category name that the entity belongs to, if available. */
+    category?: string;
+    /** Is this entity the first party? */
+    isFirstParty?: boolean;
+    /** Is this entity recognized by third-party-web? */
+    isUnrecognized?: boolean;
+    /** List of origin strings that belong to this entity found in network records. */
+    origins: Array<string>;
+  }
+
   /**
    * Info about an `LH.IcuMessage` value that was localized to a string when
    * included in the LHR. Value is either a
@@ -141,6 +190,9 @@ declare module Result {
   interface IcuMessagePaths {
     [i18nId: string]: IcuMessagePath[];
   }
+
+  /** Gather mode used to collect artifacts. */
+  type GatherMode = 'navigation'|'timespan'|'snapshot';
 }
 
 export default Result;

@@ -1,41 +1,44 @@
 /**
- * @license Copyright 2017 The Lighthouse Authors. All Rights Reserved.
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the License. You may obtain a copy of the License at http://www.apache.org/licenses/LICENSE-2.0
- * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific language governing permissions and limitations under the License.
+ * @license
+ * Copyright 2017 Google LLC
+ * SPDX-License-Identifier: Apache-2.0
  */
-'use strict';
 
-import {strict as assert} from 'assert';
-import {jest} from '@jest/globals';
+import assert from 'assert/strict';
 
+import jestMock from 'jest-mock';
 import jsdom from 'jsdom';
-import {DOM} from '../../renderer/dom.js';
-import {Util} from '../../renderer/util.js';
-import {I18n} from '../../renderer/i18n.js';
 
-/* eslint-env jest */
+import {DOM} from '../../renderer/dom.js';
+import {I18nFormatter} from '../../renderer/i18n-formatter.js';
+import {Globals} from '../../renderer/report-globals.js';
 
 describe('DOM', () => {
   /** @type {DOM} */
   let dom;
   let window;
+  let nativeCreateObjectURL;
 
-  beforeAll(() => {
-    Util.i18n = new I18n('en', {...Util.UIStrings});
+  before(() => {
+    Globals.apply({
+      providedStrings: {},
+      i18n: new I18nFormatter('en'),
+      reportJson: null,
+    });
     window = new jsdom.JSDOM().window;
 
-    // Make a lame "polyfill" since JSDOM doesn't have createObjectURL: https://github.com/jsdom/jsdom/issues/1721
-    const lameCOURL = jest.fn(_ => `https://fake-origin/blahblah-blobid`);
-    if (!URL.createObjectURL) {
-      URL.createObjectURL = lameCOURL;
-    }
+    // The Node version of URL.createObjectURL isn't compatible with the jsdom blob type,
+    // so we stub it.
+    nativeCreateObjectURL = URL.createObjectURL;
+    URL.createObjectURL = jestMock.fn(_ => `https://fake-origin/blahblah-blobid`);
 
     dom = new DOM(window.document);
     dom.setLighthouseChannel('someChannel');
   });
 
-  afterAll(() => {
-    Util.i18n = undefined;
+  after(() => {
+    Globals.i18n = undefined;
+    URL.createObjectURL = nativeCreateObjectURL;
   });
 
   describe('createElement', () => {
@@ -97,6 +100,21 @@ describe('DOM', () => {
           'and some text afterwards.', 'link with spaces in brackets');
     });
 
+    it('correctly converts code snippets', () => {
+      let result = dom.convertMarkdownLinkSnippets(
+        'Some `code`. [Learn more](http://example.com).');
+      assert.equal(result.innerHTML,
+        '<span>Some <code>code</code>. </span>' +
+        '<a rel="noopener" target="_blank" href="http://example.com/">Learn more</a>.');
+
+      result = dom.convertMarkdownLinkSnippets(
+        '[link with `code`](https://example.com/foo) and some text afterwards.');
+      assert.equal(result.innerHTML,
+        '<a rel="noopener" target="_blank" href="https://example.com/foo">' +
+        '<span>link with <code>code</code></span>' +
+        '</a> and some text afterwards.', 'link with code snippet inside');
+    });
+
     it('handles invalid urls', () => {
       const text = 'Text has [bad](https:///) link.';
       assert.throws(() => {
@@ -121,8 +139,9 @@ describe('DOM', () => {
       const text = 'Ensuring `<td>` cells using the `[headers]` are good. ' +
           '[Learn more](https://dequeuniversity.com/rules/axe/3.1/td-headers-attr).';
       const result = dom.convertMarkdownLinkSnippets(text);
-      assert.equal(result.innerHTML, 'Ensuring `&lt;td&gt;` cells using the `[headers]` are ' +
-          'good. <a rel="noopener" target="_blank" href="https://dequeuniversity.com/rules/axe/3.1/td-headers-attr">Learn more</a>.');
+      assert.equal(result.innerHTML,
+          '<span>Ensuring <code>&lt;td&gt;</code> cells using the <code>[headers]</code> are ' +
+          'good. </span><a rel="noopener" target="_blank" href="https://dequeuniversity.com/rules/axe/3.1/td-headers-attr">Learn more</a>.');
     });
 
     it('appends utm params to the URLs with https://developers.google.com origin', () => {
@@ -133,10 +152,17 @@ describe('DOM', () => {
     });
 
     it('appends utm params to the URLs with https://web.dev origin', () => {
-      const text = '[Learn more](https://web.dev/tap-targets/).';
+      const text = '[Learn more](https://developer.chrome.com/docs/lighthouse/seo/invalid-robots-txt/).';
 
       const result = dom.convertMarkdownLinkSnippets(text);
-      assert.equal(result.innerHTML, '<a rel="noopener" target="_blank" href="https://web.dev/tap-targets/?utm_source=lighthouse&amp;utm_medium=someChannel">Learn more</a>.');
+      assert.equal(result.innerHTML, '<a rel="noopener" target="_blank" href="https://developer.chrome.com/docs/lighthouse/seo/invalid-robots-txt/?utm_source=lighthouse&amp;utm_medium=someChannel">Learn more</a>.');
+    });
+
+    it('appends utm params to the URLs with https://developer.chrome.com origin', () => {
+      const text = '[Learn more](https://developer.chrome.com/docs/lighthouse/seo/invalid-robots-txt/).';
+
+      const result = dom.convertMarkdownLinkSnippets(text);
+      assert.equal(result.innerHTML, '<a rel="noopener" target="_blank" href="https://developer.chrome.com/docs/lighthouse/seo/invalid-robots-txt/?utm_source=lighthouse&amp;utm_medium=someChannel">Learn more</a>.');
     });
 
     it('doesn\'t append utm params to other (non-docs) origins', () => {
@@ -144,6 +170,13 @@ describe('DOM', () => {
 
       const result = dom.convertMarkdownLinkSnippets(text);
       assert.equal(result.innerHTML, '<a rel="noopener" target="_blank" href="https://example.com/info">Learn more</a>.');
+    });
+
+    it('doesn\'t append utm params to other (non-docs) origins (unless forced)', () => {
+      const text = '[Learn more](https://example.com/info).';
+
+      const result = dom.convertMarkdownLinkSnippets(text, {alwaysAppendUtmSource: true});
+      assert.equal(result.innerHTML, '<a rel="noopener" target="_blank" href="https://example.com/info?utm_source=lighthouse&amp;utm_medium=someChannel">Learn more</a>.');
     });
   });
 

@@ -1,0 +1,24 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`Performance: predictive performance audit should compute the predicted values 1`] = `
+Object {
+  "optimisticFCP": 2294,
+  "optimisticFMP": 2294,
+  "optimisticLCP": 2294,
+  "optimisticSI": 1393,
+  "optimisticTTI": 3795,
+  "pessimisticFCP": 2294,
+  "pessimisticFMP": 3233,
+  "pessimisticLCP": 3233,
+  "pessimisticSI": 3052,
+  "pessimisticTTI": 5119,
+  "roughEstimateOfFCP": 2294,
+  "roughEstimateOfFMP": 2764,
+  "roughEstimateOfLCP": 2764,
+  "roughEstimateOfLCPLoadEnd": undefined,
+  "roughEstimateOfLCPLoadStart": undefined,
+  "roughEstimateOfSI": 3684,
+  "roughEstimateOfTTFB": 611,
+  "roughEstimateOfTTI": 4457,
+}
+`;

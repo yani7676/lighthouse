@@ -1,9 +1,8 @@
 /**
- * @license Copyright 2020 The Lighthouse Authors. All Rights Reserved.
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the License. You may obtain a copy of the License at http://www.apache.org/licenses/LICENSE-2.0
- * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific language governing permissions and limitations under the License.
+ * @license
+ * Copyright 2020 Google LLC
+ * SPDX-License-Identifier: Apache-2.0
  */
-'use strict';
 
 /**
  * @fileoverview These functions define {Rect}s and {Size}s using two different coordinate spaces:
@@ -11,22 +10,22 @@
  *   2. Display coords (DC suffix): that match the CSS pixel coordinate space of the LH report's page.
  */
 
+import {Globals} from './report-globals.js';
+
 /** @typedef {import('./dom.js').DOM} DOM */
-/** @typedef {LH.Artifacts.Rect} Rect */
+/** @typedef {LH.Audit.Details.Rect} Rect */
 /** @typedef {{width: number, height: number}} Size */
 
 /**
  * @typedef InstallOverlayFeatureParams
  * @property {DOM} dom
- * @property {Element} reportEl
+ * @property {Element} rootEl
  * @property {Element} overlayContainerEl
- * @property {LH.Artifacts.FullPageScreenshot} fullPageScreenshot
+ * @property {LH.Result.FullPageScreenshot} fullPageScreenshot
  */
 
-import {Util} from './util.js';
-
 /**
- * @param {LH.Artifacts.FullPageScreenshot['screenshot']} screenshot
+ * @param {LH.Result.FullPageScreenshot['screenshot']} screenshot
  * @param {LH.Audit.Details.Rect} rect
  * @return {boolean}
  */
@@ -51,7 +50,7 @@ function clamp(value, min, max) {
 /**
  * @param {Rect} rect
  */
-function getRectCenterPoint(rect) {
+function getElementRectCenterPoint(rect) {
   return {
     x: rect.left + rect.width / 2,
     y: rect.top + rect.height / 2,
@@ -68,7 +67,7 @@ export class ElementScreenshotRenderer {
    * @param {Size} screenshotSize
    */
   static getScreenshotPositions(elementRectSC, elementPreviewSizeSC, screenshotSize) {
-    const elementRectCenter = getRectCenterPoint(elementRectSC);
+    const elementRectCenter = getElementRectCenterPoint(elementRectSC);
 
     // Try to center clipped region.
     const screenshotLeftVisibleEdge = clamp(
@@ -98,12 +97,12 @@ export class ElementScreenshotRenderer {
    * @param {DOM} dom
    * @param {HTMLElement} maskEl
    * @param {{left: number, top: number}} positionClip
-   * @param {LH.Artifacts.Rect} elementRect
+   * @param {Rect} elementRect
    * @param {Size} elementPreviewSize
    */
   static renderClipPathInScreenshot(dom, maskEl, positionClip, elementRect, elementPreviewSize) {
     const clipPathEl = dom.find('clipPath', maskEl);
-    const clipId = `clip-${Util.getUniqueSuffix()}`;
+    const clipId = `clip-${Globals.getUniqueSuffix()}`;
     clipPathEl.id = clipId;
     maskEl.style.clipPath = `url(#${clipId})`;
 
@@ -132,10 +131,10 @@ export class ElementScreenshotRenderer {
    * Allows for multiple Lighthouse reports to be rendered on the page, each with their
    * own full page screenshot.
    * @param {HTMLElement} el
-   * @param {LH.Artifacts.FullPageScreenshot['screenshot']} screenshot
+   * @param {LH.Result.FullPageScreenshot['screenshot']} screenshot
    */
   static installFullPageScreenshot(el, screenshot) {
-    el.style.setProperty('--element-screenshot-url', `url(${screenshot.data})`);
+    el.style.setProperty('--element-screenshot-url', `url('${screenshot.data}')`);
   }
 
   /**
@@ -143,14 +142,14 @@ export class ElementScreenshotRenderer {
    * @param {InstallOverlayFeatureParams} opts
    */
   static installOverlayFeature(opts) {
-    const {dom, reportEl, overlayContainerEl, fullPageScreenshot} = opts;
+    const {dom, rootEl, overlayContainerEl, fullPageScreenshot} = opts;
     const screenshotOverlayClass = 'lh-screenshot-overlay--enabled';
     // Don't install the feature more than once.
-    if (reportEl.classList.contains(screenshotOverlayClass)) return;
-    reportEl.classList.add(screenshotOverlayClass);
+    if (rootEl.classList.contains(screenshotOverlayClass)) return;
+    rootEl.classList.add(screenshotOverlayClass);
 
     // Add a single listener to the provided element to handle all clicks within (event delegation).
-    reportEl.addEventListener('click', e => {
+    rootEl.addEventListener('click', e => {
       const target = /** @type {?HTMLElement} */ (e.target);
       if (!target) return;
       // Only activate the overlay for clicks on the screenshot *preview* of an element, not the full-size too.
@@ -187,7 +186,7 @@ export class ElementScreenshotRenderer {
         overlay.remove();
         return;
       }
-      overlay.appendChild(screenshotElement);
+      overlay.append(screenshotElement);
       overlay.addEventListener('click', () => overlay.remove());
     });
   }
@@ -195,7 +194,7 @@ export class ElementScreenshotRenderer {
   /**
    * Given the size of the element in the screenshot and the total available size of our preview container,
    * compute the factor by which we need to zoom out to view the entire element with context.
-   * @param {LH.Artifacts.Rect} elementRectSC
+   * @param {Rect} elementRectSC
    * @param {Size} renderContainerSizeDC
    * @return {number}
    */
@@ -214,8 +213,8 @@ export class ElementScreenshotRenderer {
    * Used to render both the thumbnail preview in details tables and the full-page screenshot in the lightbox.
    * Returns null if element rect is outside screenshot bounds.
    * @param {DOM} dom
-   * @param {LH.Artifacts.FullPageScreenshot['screenshot']} screenshot
-   * @param {LH.Artifacts.Rect} elementRectSC Region of screenshot to highlight.
+   * @param {LH.Result.FullPageScreenshot['screenshot']} screenshot
+   * @param {Rect} elementRectSC Region of screenshot to highlight.
    * @param {Size} maxRenderSizeDC e.g. maxThumbnailSize or maxLightboxSize.
    * @return {Element|null}
    */
@@ -240,7 +239,10 @@ export class ElementScreenshotRenderer {
       width: maxRenderSizeDC.width / zoomFactor,
       height: maxRenderSizeDC.height / zoomFactor,
     };
+
     elementPreviewSizeSC.width = Math.min(screenshot.width, elementPreviewSizeSC.width);
+    elementPreviewSizeSC.height = Math.min(screenshot.height, elementPreviewSizeSC.height);
+
     /* This preview size is either the size of the thumbnail or size of the Lightbox */
     const elementPreviewSizeDC = {
       width: elementPreviewSizeSC.width * zoomFactor,
@@ -252,9 +254,6 @@ export class ElementScreenshotRenderer {
       elementPreviewSizeSC,
       {width: screenshot.width, height: screenshot.height}
     );
-
-    const contentEl = dom.find('div.lh-element-screenshot__content', containerEl);
-    contentEl.style.top = `-${elementPreviewSizeDC.height}px`;
 
     const imageEl = dom.find('div.lh-element-screenshot__image', containerEl);
     imageEl.style.width = elementPreviewSizeDC.width + 'px';

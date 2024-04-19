@@ -1,38 +1,33 @@
 /**
  * @license
- * Copyright 2017 The Lighthouse Authors. All Rights Reserved.
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS-IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * Copyright 2017 Google LLC
+ * SPDX-License-Identifier: Apache-2.0
  */
-'use strict';
+
+/* eslint-env browser */
 
 /** @typedef {HTMLElementTagNameMap & {[id: string]: HTMLElement}} HTMLElementByTagName */
+/** @typedef {SVGElementTagNameMap & {[id: string]: SVGElement}} SVGElementByTagName */
 /** @template {string} T @typedef {import('typed-query-selector/parser').ParseSelector<T, Element>} ParseSelector */
 
-import {Util} from './util.js';
+import {Util} from '../../shared/util.js';
 import {createComponent} from './components.js';
 
 export class DOM {
   /**
    * @param {Document} document
+   * @param {HTMLElement} rootEl
    */
-  constructor(document) {
+  constructor(document, rootEl) {
     /** @type {Document} */
     this._document = document;
     /** @type {string} */
     this._lighthouseChannel = 'unknown';
     /** @type {Map<string, DocumentFragment>} */
     this._componentCache = new Map();
+    /** @type {HTMLElement} */
+    // For legacy Report API users, this'll be undefined, but set in renderReport
+    this.rootEl = rootEl;
   }
 
   /**
@@ -68,11 +63,31 @@ export class DOM {
   }
 
   /**
+   * @template {string} T
+   * @param {T} name
+   * @param {string=} className
+   * @return {SVGElementByTagName[T]}
+   */
+  createSVGElement(name, className) {
+    return /** @type {SVGElementByTagName[T]} */ (
+      this._document.createElementNS('http://www.w3.org/2000/svg', name, className));
+  }
+
+  /**
    * @return {!DocumentFragment}
    */
   createFragment() {
     return this._document.createDocumentFragment();
   }
+
+  /**
+   * @param {string} data
+   * @return {!Node}
+   */
+  createTextNode(data) {
+    return this._document.createTextNode(data);
+  }
+
 
   /**
    * @template {string} T
@@ -83,7 +98,7 @@ export class DOM {
    */
   createChildOf(parentElem, elementName, className) {
     const element = this.createElement(elementName, className);
-    parentElem.appendChild(element);
+    parentElem.append(element);
     return element;
   }
 
@@ -107,25 +122,34 @@ export class DOM {
     return cloned;
   }
 
+  clearComponentCache() {
+    this._componentCache.clear();
+  }
+
   /**
    * @param {string} text
+   * @param {{alwaysAppendUtmSource?: boolean}} opts
    * @return {Element}
    */
-  convertMarkdownLinkSnippets(text) {
+  convertMarkdownLinkSnippets(text, opts = {}) {
     const element = this.createElement('span');
 
     for (const segment of Util.splitMarkdownLink(text)) {
+      const processedSegment = segment.text.includes('`') ?
+        this.convertMarkdownCodeSnippets(segment.text) :
+        segment.text;
+
       if (!segment.isLink) {
         // Plain text segment.
-        element.appendChild(this._document.createTextNode(segment.text));
+        element.append(processedSegment);
         continue;
       }
 
       // Otherwise, append any links found.
       const url = new URL(segment.linkHref);
 
-      const DOCS_ORIGINS = ['https://developers.google.com', 'https://web.dev'];
-      if (DOCS_ORIGINS.includes(url.origin)) {
+      const DOCS_ORIGINS = ['https://developers.google.com', 'https://web.dev', 'https://developer.chrome.com'];
+      if (DOCS_ORIGINS.includes(url.origin) || opts.alwaysAppendUtmSource) {
         url.searchParams.set('utm_source', 'lighthouse');
         url.searchParams.set('utm_medium', this._lighthouseChannel);
       }
@@ -133,9 +157,9 @@ export class DOM {
       const a = this.createElement('a');
       a.rel = 'noopener';
       a.target = '_blank';
-      a.textContent = segment.text;
+      a.append(processedSegment);
       this.safelySetHref(a, url.href);
-      element.appendChild(a);
+      element.append(a);
     }
 
     return element;
@@ -192,9 +216,9 @@ export class DOM {
       if (segment.isCode) {
         const pre = this.createElement('code');
         pre.textContent = segment.text;
-        element.appendChild(pre);
+        element.append(pre);
       } else {
-        element.appendChild(this._document.createTextNode(segment.text));
+        element.append(this._document.createTextNode(segment.text));
       }
     }
 
@@ -210,6 +234,8 @@ export class DOM {
   }
 
   /**
+   * ONLY use if `dom.rootEl` isn't sufficient for your needs. `dom.rootEl` is preferred
+   * for all scoping, because a document can have multiple reports within it.
    * @return {Document}
    */
   document() {
@@ -225,23 +251,38 @@ export class DOM {
   }
 
   /**
-   * Guaranteed context.querySelector. Always returns an element or throws if
+   * Typed and guaranteed context.querySelector. Always returns an element or throws if
    * nothing matches query.
+   *
    * @template {string} T
    * @param {T} query
    * @param {ParentNode} context
    * @return {ParseSelector<T>}
    */
-  find(query, context) {
-    const result = context.querySelector(query);
+  find(query, context = this.rootEl ?? this._document) {
+    const result = this.maybeFind(query, context);
     if (result === null) {
       throw new Error(`query ${query} not found`);
     }
 
+    return result;
+  }
+
+  /**
+   * Typed context.querySelector.
+   *
+   * @template {string} T
+   * @param {T} query
+   * @param {ParentNode} context
+   * @return {ParseSelector<T> | null}
+   */
+  maybeFind(query, context) {
+    const result = context.querySelector(query);
+
     // Because we control the report layout and templates, use the simpler
     // `typed-query-selector` types that don't require differentiating between
     // e.g. HTMLAnchorElement and SVGAElement. See https://github.com/GoogleChrome/lighthouse/issues/12011
-    return /** @type {ParseSelector<T>} */ (result);
+    return /** @type {ParseSelector<T> | null} */ (result);
   }
 
   /**
@@ -253,5 +294,33 @@ export class DOM {
   findAll(query, context) {
     const elements = Array.from(context.querySelectorAll(query));
     return elements;
+  }
+
+  /**
+   * Fires a custom DOM event on target.
+   * @param {string} name Name of the event.
+   * @param {Node=} target DOM node to fire the event on.
+   * @param {*=} detail Custom data to include.
+   */
+  fireEventOn(name, target = this._document, detail) {
+    const event = new CustomEvent(name, detail ? {detail} : undefined);
+    target.dispatchEvent(event);
+  }
+
+  /**
+   * Downloads a file (blob) using a[download].
+   * @param {Blob|File} blob The file to save.
+   * @param {string} filename
+   */
+  saveFile(blob, filename) {
+    const a = this.createElement('a');
+    a.download = filename;
+    this.safelySetBlobHref(a, blob);
+    this._document.body.append(a); // Firefox requires anchor to be in the DOM.
+    a.click();
+
+    // cleanup.
+    this._document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(a.href), 500);
   }
 }

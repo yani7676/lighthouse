@@ -1,29 +1,27 @@
 /**
- * @license Copyright 2020 The Lighthouse Authors. All Rights Reserved.
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the License. You may obtain a copy of the License at http://www.apache.org/licenses/LICENSE-2.0
- * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific language governing permissions and limitations under the License.
+ * @license
+ * Copyright 2020 Google LLC
+ * SPDX-License-Identifier: Apache-2.0
  */
-'use strict';
 
-const fs = require('fs');
-const path = require('path');
-const rollup = require('rollup');
-const commonjs =
-  // @ts-expect-error types are wrong.
-  /** @type {import('rollup-plugin-commonjs').default} */ (require('rollup-plugin-commonjs'));
-const {terser: rollupTerser} = require('rollup-plugin-terser');
-const {nodeResolve} = require('@rollup/plugin-node-resolve');
-const cpy = require('cpy');
-const ghPages = require('gh-pages');
-const glob = require('glob');
-const lighthousePackage = require('../package.json');
-const terser = require('terser');
-const {LH_ROOT} = require('../root.js');
+import fs from 'fs';
+import os from 'os';
+import path from 'path';
+
+import esbuild from 'esbuild';
+import cpy from 'cpy';
+import ghPages from 'gh-pages';
+import glob from 'glob';
+import * as terser from 'terser';
+
+import {LH_ROOT} from '../shared/root.js';
+import {readJson} from '../core/test/test-utils.js';
 
 const ghPagesDistDir = `${LH_ROOT}/dist/gh-pages`;
+const lighthousePackage = readJson(`${LH_ROOT}/package.json`);
 
 const license = `/*
-* @license Copyright 2020 The Lighthouse Authors. All Rights Reserved.
+* @license Copyright 2020 Google LLC
 *
 * Licensed under the Apache License, Version 2.0 (the "License");
 * you may not use this file except in compliance with the License.
@@ -41,7 +39,7 @@ const license = `/*
 /**
  * Literal string (representing JS, CSS, etc...), or an object with a path, which would
  * be interpreted relative to opts.appDir and be glob-able.
- * @typedef {{path: string, rollup?: boolean} | string} Source
+ * @typedef {{path: string, rollup?: boolean, esbuild?: boolean, esbuildPlugins?: esbuild.Plugin[]} | string} Source
  */
 
 /**
@@ -52,7 +50,7 @@ const license = `/*
  * @property {Record<string, string>=} htmlReplacements Needle -> Replacement mapping, used on html source.
  * @property {Source[]} stylesheets
  * @property {Source[]} javascripts
- * @property {Array<{path: string}>} assets List of paths to copy. Glob-able, maintains directory structure.
+ * @property {Array<{path: string, destDir?: string, rename?: string}>} assets List of paths to copy. Glob-able, maintains directory structure and copies into appDir. Provide a `destDir` and `rename` to state explicitly how to save in the app dir folder.
  */
 
 /**
@@ -83,11 +81,15 @@ class GhPagesApp {
   constructor(opts) {
     this.opts = opts;
     this.distDir = `${ghPagesDistDir}/${opts.name}`;
+    /** @type {string[]} */
+    this.preloadScripts = [];
   }
 
   async build() {
-    fs.mkdirSync(this.distDir, {recursive: true}); // Ensure dist is present, else rmdir will throw. COMPAT: when dropping Node 12, replace with fs.rm(p, {force: true})
-    fs.rmdirSync(this.distDir, {recursive: true});
+    fs.rmSync(this.distDir, {recursive: true, force: true});
+
+    const bundledJs = await this._compileJs();
+    safeWriteFile(`${this.distDir}/src/bundled.js`, bundledJs);
 
     const html = await this._compileHtml();
     safeWriteFile(`${this.distDir}/index.html`, html);
@@ -95,13 +97,13 @@ class GhPagesApp {
     const css = await this._compileCss();
     safeWriteFile(`${this.distDir}/styles/bundled.css`, css);
 
-    const bundledJs = await this._compileJs();
-    safeWriteFile(`${this.distDir}/src/bundled.js`, bundledJs);
-
-    await cpy(this.opts.assets.map(asset => asset.path), this.distDir, {
-      cwd: this.opts.appDir,
-      parents: true,
-    });
+    for (const {path, destDir, rename} of this.opts.assets) {
+      const dir = destDir ? `${this.distDir}/${destDir}` : this.distDir;
+      await cpy(path, dir, {
+        cwd: this.opts.appDir,
+        rename,
+      });
+    }
   }
 
   /**
@@ -130,10 +132,13 @@ class GhPagesApp {
     for (const source of sources) {
       if (typeof source === 'string') {
         result.push(source);
-      } else if (source.rollup) {
-        result.push(await this._rollupSource(`${this.opts.appDir}/${source.path}`));
+      } else if (source.esbuild) {
+        result.push(await this._esbuildSource(
+          path.resolve(this.opts.appDir, source.path),
+          source.esbuildPlugins)
+        );
       } else {
-        result.push(...loadFiles(`${this.opts.appDir}/${source.path}`));
+        result.push(...loadFiles(path.resolve(this.opts.appDir, source.path)));
       }
     }
 
@@ -142,20 +147,30 @@ class GhPagesApp {
 
   /**
    * @param {string} input
+   * @param {esbuild.Plugin[]=} plugins
    * @return {Promise<string>}
    */
-  async _rollupSource(input) {
-    const plugins = [
-      nodeResolve(),
-      commonjs(),
-    ];
-    if (!process.env.DEBUG) plugins.push(rollupTerser());
-    const bundle = await rollup.rollup({
-      input,
+  async _esbuildSource(input, plugins) {
+    const result = await esbuild.build({
+      entryPoints: [input],
+      write: false,
+      outdir: fs.mkdtempSync(path.join(os.tmpdir(), 'gh-pages-app-')),
+      format: 'esm',
+      bundle: true,
+      splitting: true,
+      minify: !process.env.DEBUG,
       plugins,
     });
-    const {output} = await bundle.generate({format: 'iife'});
-    return output[0].code;
+
+    // Return the code from the main chunk, and save the rest to the src directory.
+    for (let i = 1; i < result.outputFiles.length; i++) {
+      const code = result.outputFiles[i].text;
+      const basename = path.basename(result.outputFiles[i].path);
+      safeWriteFile(`${this.distDir}/src/${basename}`, code);
+    }
+
+    this.preloadScripts.push(...result.outputFiles.slice(1).map(f => path.basename(f.path)));
+    return result.outputFiles[0].text;
   }
 
   async _compileHtml() {
@@ -166,6 +181,17 @@ class GhPagesApp {
       for (const [key, value] of Object.entries(this.opts.htmlReplacements)) {
         htmlSrc = htmlSrc.replace(key, value);
       }
+    }
+
+    if (this.preloadScripts.length) {
+      const preloads = this.preloadScripts.map(fileName =>
+        `<link rel="preload" href="./src/${fileName}" as="script" crossorigin="anonymous" />`
+      ).join('\n');
+      const endHeadIndex = htmlSrc.indexOf('</head>');
+      if (endHeadIndex === -1) {
+        throw new Error('HTML file needs a <head> element to inject preloads');
+      }
+      htmlSrc = htmlSrc.slice(0, endHeadIndex) + preloads + htmlSrc.slice(endHeadIndex);
     }
 
     return htmlSrc;
@@ -183,7 +209,7 @@ class GhPagesApp {
     const contents = [
       `"use strict";`,
       versionJs,
-      ...await this._resolveSourcesList(this.opts.javascripts),
+      ...(await this._resolveSourcesList(this.opts.javascripts)),
     ];
     if (process.env.DEBUG) return contents.join('\n');
 
@@ -199,4 +225,4 @@ class GhPagesApp {
   }
 }
 
-module.exports = GhPagesApp;
+export {GhPagesApp};
