@@ -113,6 +113,11 @@ const expectations = {
           url: 'http://localhost:10200/oopif-simple-page.html',
           content: /new Worker/,
         },
+        // inline script
+        {
+          url: 'http://localhost:10200/oopif-simple-page.html',
+          content: /Force some stack frames/,
+        },
         // fetch('simple-script.js').then(r => r.text()).then(eval);
         {
           name: '<compiled from string in http://localhost:10200/oopif-simple-page.html>',

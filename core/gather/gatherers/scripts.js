@@ -35,6 +35,7 @@ function shouldIgnoreScript(script) {
     '_lighthouse-eval.js',
     '__puppeteer_evaluation_script__',
     'pptr://__puppeteer_evaluation_script__',
+    'pptr:internal',
   ].includes(script.url);
 }
 
