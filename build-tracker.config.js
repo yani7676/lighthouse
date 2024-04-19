@@ -3,7 +3,6 @@
  * Copyright 2024 Google LLC
  * SPDX-License-Identifier: Apache-2.0
  */
-'use strict';
 
 // https://buildtracker.dev/docs/installation/#upload-your-builds
 
