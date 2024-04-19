@@ -1,7 +1,7 @@
 /**
- * @license Copyright 2017 The Lighthouse Authors. All Rights Reserved.
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the License. You may obtain a copy of the License at http://www.apache.org/licenses/LICENSE-2.0
- * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific language governing permissions and limitations under the License.
+ * @license
+ * Copyright 2017 Google LLC
+ * SPDX-License-Identifier: Apache-2.0
  */
 
 /**
@@ -16,7 +16,7 @@ const UIStrings = {
   /** Title of a Lighthouse audit that provides detail on the Javascript libraries that are used on the page. */
   title: 'Detected JavaScript libraries',
   /** Description of a Lighthouse audit that tells the user what this audit is detecting. This is displayed after a user expands the section to see more. No character length limits. */
-  description: 'All front-end JavaScript libraries detected on the page. [Learn more about this JavaScript library detection diagnostic audit](https://web.dev/js-libraries/).',
+  description: 'All front-end JavaScript libraries detected on the page. [Learn more about this JavaScript library detection diagnostic audit](https://developer.chrome.com/docs/lighthouse/best-practices/js-libraries/).',
   /** Label for a column in a data table; entries will be the version numbers of the detected Javascript libraries.  */
   columnVersion: 'Version',
 };
@@ -54,10 +54,10 @@ class JsLibrariesAudit extends Audit {
 
     /** @type {LH.Audit.Details.Table['headings']} */
     const headings = [
-      {key: 'name', itemType: 'text', text: str_(i18n.UIStrings.columnName)},
-      {key: 'version', itemType: 'text', text: str_(UIStrings.columnVersion)},
+      {key: 'name', valueType: 'text', label: str_(i18n.UIStrings.columnName)},
+      {key: 'version', valueType: 'text', label: str_(UIStrings.columnVersion)},
     ];
-    const details = Audit.makeTableDetails(headings, libDetails, {});
+    const details = Audit.makeTableDetails(headings, libDetails);
 
     const debugData = {
       type: /** @type {const} */ ('debugdata'),

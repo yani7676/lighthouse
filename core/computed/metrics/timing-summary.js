@@ -1,7 +1,7 @@
 /**
- * @license Copyright 2019 The Lighthouse Authors. All Rights Reserved.
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the License. You may obtain a copy of the License at http://www.apache.org/licenses/LICENSE-2.0
- * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific language governing permissions and limitations under the License.
+ * @license
+ * Copyright 2019 Google LLC
+ * SPDX-License-Identifier: Apache-2.0
  */
 
 import {ProcessedTrace} from '../processed-trace.js';
@@ -18,13 +18,15 @@ import {SpeedIndex} from './speed-index.js';
 import {MaxPotentialFID} from './max-potential-fid.js';
 import {TotalBlockingTime} from './total-blocking-time.js';
 import {makeComputedArtifact} from '../computed-artifact.js';
+import {TimeToFirstByte} from './time-to-first-byte.js';
+import {LCPBreakdown} from './lcp-breakdown.js';
 
 class TimingSummary {
   /**
      * @param {LH.Trace} trace
      * @param {LH.DevtoolsLog} devtoolsLog
      * @param {LH.Artifacts['GatherContext']} gatherContext
-     * @param {ImmutableObject<LH.Config.Settings>} settings
+     * @param {LH.Util.ImmutableObject<LH.Config.Settings>} settings
      * @param {LH.Artifacts['URL']} URL
      * @param {LH.Artifacts.ComputedContext} context
      * @return {Promise<{metrics: LH.Artifacts.TimingSummary, debugInfo: Record<string,boolean>}>}
@@ -45,7 +47,7 @@ class TimingSummary {
     /* eslint-disable max-len */
 
     const processedTrace = await ProcessedTrace.request(trace, context);
-    const processedNavigation = await requestOrUndefined(ProcessedNavigation, processedTrace);
+    const processedNavigation = await requestOrUndefined(ProcessedNavigation, trace);
     const speedline = await Speedline.request(trace, context);
     const firstContentfulPaint = await requestOrUndefined(FirstContentfulPaint, metricComputationData);
     const firstContentfulPaintAllFrames = await requestOrUndefined(FirstContentfulPaintAllFrames, metricComputationData);
@@ -57,11 +59,12 @@ class TimingSummary {
     const maxPotentialFID = await requestOrUndefined(MaxPotentialFID, metricComputationData);
     const speedIndex = await requestOrUndefined(SpeedIndex, metricComputationData);
     const totalBlockingTime = await requestOrUndefined(TotalBlockingTime, metricComputationData);
+    const lcpBreakdown = await requestOrUndefined(LCPBreakdown, metricComputationData);
+    const ttfb = await requestOrUndefined(TimeToFirstByte, metricComputationData);
 
     const {
       cumulativeLayoutShift,
       cumulativeLayoutShiftMainFrame,
-      totalCumulativeLayoutShift,
     } = cumulativeLayoutShiftValues || {};
 
     /** @type {LH.Artifacts.TimingSummary} */
@@ -85,9 +88,14 @@ class TimingSummary {
       maxPotentialFID: maxPotentialFID?.timing,
       cumulativeLayoutShift,
       cumulativeLayoutShiftMainFrame,
-      totalCumulativeLayoutShift,
 
-      // Include all timestamps of interest from trace of tab
+      lcpLoadStart: lcpBreakdown?.loadStart,
+      lcpLoadEnd: lcpBreakdown?.loadEnd,
+
+      timeToFirstByte: ttfb?.timing,
+      timeToFirstByteTs: ttfb?.timestamp,
+
+      // Include all timestamps of interest from the processed trace
       observedTimeOrigin: processedTrace.timings.timeOrigin,
       observedTimeOriginTs: processedTrace.timestamps.timeOrigin,
       // For now, navigationStart is always timeOrigin.
@@ -113,7 +121,6 @@ class TimingSummary {
       observedDomContentLoadedTs: processedNavigation?.timestamps.domContentLoaded,
       observedCumulativeLayoutShift: cumulativeLayoutShift,
       observedCumulativeLayoutShiftMainFrame: cumulativeLayoutShiftMainFrame,
-      observedTotalCumulativeLayoutShift: totalCumulativeLayoutShift,
 
       // Include some visual metrics from speedline
       observedFirstVisualChange: speedline.first,
@@ -134,7 +141,7 @@ class TimingSummary {
     return {metrics, debugInfo};
   }
   /**
-   * @param {{trace: LH.Trace, devtoolsLog: LH.DevtoolsLog, gatherContext: LH.Artifacts['GatherContext']; settings: ImmutableObject<LH.Config.Settings>, URL: LH.Artifacts['URL']}} data
+   * @param {{trace: LH.Trace, devtoolsLog: LH.DevtoolsLog, gatherContext: LH.Artifacts['GatherContext']; settings: LH.Util.ImmutableObject<LH.Config.Settings>, URL: LH.Artifacts['URL']}} data
    * @param {LH.Artifacts.ComputedContext} context
    * @return {Promise<{metrics: LH.Artifacts.TimingSummary, debugInfo: Record<string,boolean>}>}
    */

@@ -1,12 +1,12 @@
 /**
- * @license Copyright 2021 The Lighthouse Authors. All Rights Reserved.
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the License. You may obtain a copy of the License at http://www.apache.org/licenses/LICENSE-2.0
- * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific language governing permissions and limitations under the License.
+ * @license
+ * Copyright 2021 Google LLC
+ * SPDX-License-Identifier: Apache-2.0
  */
 
 import {EventEmitter} from 'events';
 
-import {CDPSession} from 'puppeteer-core/lib/cjs/puppeteer/common/Connection.js';
+import {CdpCDPSession} from 'puppeteer-core/lib/cjs/puppeteer/cdp/CDPSession.js';
 
 import {TargetManager} from '../../../gather/driver/target-manager.js';
 import {createMockCdpSession} from '../mock-driver.js';
@@ -40,6 +40,10 @@ describe('TargetManager', () => {
     sendMock = sessionMock.send;
     sendMock
       .mockResponse('Page.enable')
+      .mockResponse('Page.getFrameTree', {frameTree: {frame: {id: 'mainFrameId'}}})
+      .mockResponse('Runtime.enable')
+      .mockResponse('Page.disable')
+      .mockResponse('Runtime.disable')
       .mockResponse('Runtime.runIfWaitingForDebugger');
     targetManager = new TargetManager(sessionMock.asCdpSession());
     targetInfo = createTargetInfo();
@@ -55,6 +59,7 @@ describe('TargetManager', () => {
 
       expect(sendMock.findAllInvocations('Target.setAutoAttach')).toHaveLength(1);
       expect(sendMock.findAllInvocations('Runtime.runIfWaitingForDebugger')).toHaveLength(1);
+      expect(targetManager._mainFrameId).toEqual('mainFrameId');
     });
 
     it('should autoattach to further unique sessions', async () => {
@@ -77,8 +82,8 @@ describe('TargetManager', () => {
         .mockResponse('Runtime.runIfWaitingForDebugger');
       await targetManager.enable();
 
-      expect(sessionMock.connection().on).toHaveBeenCalled();
-      const sessionListener = sessionMock.connection().on.mock.calls[0][1];
+      expect(sessionMock.on).toHaveBeenCalled();
+      const sessionListener = sessionMock.on.mock.calls.find(c => c[0] === 'sessionattached')[1];
 
       // Original, attach.
       expect(sendMock.findAllInvocations('Target.getTargetInfo')).toHaveLength(1);
@@ -103,8 +108,25 @@ describe('TargetManager', () => {
       expect(sendMock.findAllInvocations('Runtime.runIfWaitingForDebugger')).toHaveLength(4);
     });
 
-    it('should ignore non-frame targets', async () => {
+    it('should ignore errors while attaching to worker targets', async () => {
       targetInfo.type = 'worker';
+      sendMock
+        .mockResponse('Target.getTargetInfo', {targetInfo})
+        .mockResponse('Network.enable', () => {
+          throw new Error('Cannot use Network.enable');
+        })
+        .mockResponse('Target.setAutoAttach');
+      await targetManager.enable();
+
+      const invocations = sendMock.findAllInvocations('Target.setAutoAttach');
+      expect(invocations).toHaveLength(0);
+
+      // Should still be resumed.
+      expect(sendMock.findAllInvocations('Runtime.runIfWaitingForDebugger')).toHaveLength(1);
+    });
+
+    it('should ignore targets that are not frames or web workers', async () => {
+      targetInfo.type = 'service_worker';
       sendMock
         .mockResponse('Target.getTargetInfo', {targetInfo})
         .mockResponse('Target.setAutoAttach');
@@ -167,14 +189,16 @@ describe('TargetManager', () => {
         .mockResponse('Target.getTargetInfo', {targetInfo})
         .mockResponse('Network.enable')
         .mockResponse('Target.setAutoAttach', () => Promise.reject(fatalError));
-      await expect(targetManager.enable()).rejects.toMatchObject({message: 'Fatal error'});
+      await expect(targetManager.enable()).rejects.toThrowError(
+        'Protocol error (Target.setAutoAttach): Fatal error');
 
       // Should still attempt to resume target.
       expect(sendMock.findAllInvocations('Runtime.runIfWaitingForDebugger')).toHaveLength(1);
     });
 
     it('should resume the target when finished', async () => {
-      sendMock.mockResponse('Target.getTargetInfo', {});
+      targetInfo.type = 'service_worker';
+      sendMock.mockResponse('Target.getTargetInfo', {targetInfo});
       await targetManager.enable();
 
       const invocations = sendMock.findAllInvocations('Runtime.runIfWaitingForDebugger');
@@ -230,7 +254,6 @@ describe('TargetManager', () => {
       await targetManager.disable();
 
       expect(sessionMock.off).toHaveBeenCalled();
-      expect(sessionMock.connection().off).toHaveBeenCalled();
     });
   });
 
@@ -246,9 +269,9 @@ describe('TargetManager', () => {
       }
 
       const mockCdpConnection = new MockCdpConnection();
-      /** @type {LH.Puppeteer.CDPSession} */
+      /** @type {import('puppeteer-core').CDPSession} */
       // @ts-expect-error - close enough to the real thing.
-      const cdpSession = new CDPSession(mockCdpConnection, '', sessionId);
+      const cdpSession = new CdpCDPSession(mockCdpConnection, '', sessionId);
       return cdpSession;
     }
 
@@ -257,8 +280,10 @@ describe('TargetManager', () => {
 
       const rootTargetInfo = createTargetInfo();
       // Still mock command responses at session level.
-      rootSession.send = createMockSendCommandFn({useSessionId: false})
+      rootSession.send = createMockSendCommandFn()
         .mockResponse('Page.enable')
+        .mockResponse('Page.getFrameTree', {frameTree: {frame: {id: ''}}})
+        .mockResponse('Runtime.enable')
         .mockResponse('Target.getTargetInfo', {targetInfo: rootTargetInfo})
         .mockResponse('Network.enable')
         .mockResponse('Target.setAutoAttach')
@@ -271,15 +296,13 @@ describe('TargetManager', () => {
       const iframeSession = createCdpSession('iframe');
       const iframeTargetInfo = createTargetInfo({type: 'iframe', targetId: 'iframe'});
       // Still mock command responses at session level.
-      iframeSession.send = createMockSendCommandFn({useSessionId: false})
+      iframeSession.send = createMockSendCommandFn()
         .mockResponse('Target.getTargetInfo', {targetInfo: iframeTargetInfo})
         .mockResponse('Network.enable')
         .mockResponse('Target.setAutoAttach')
         .mockResponse('Runtime.runIfWaitingForDebugger');
 
-      const rootConnection = rootSession.connection();
-      if (!rootConnection) throw new Error('no connection');
-      rootConnection.emit('sessionattached', iframeSession);
+      rootSession.emit('sessionattached', iframeSession);
 
       // Wait for iframe session to be attached.
       await new Promise(resolve => setTimeout(resolve, 0));
@@ -309,24 +332,29 @@ describe('TargetManager', () => {
         method: 'DOM.documentUpdated',
         params: undefined,
         sessionId: 'root',
+        targetType: 'page',
       });
       expect(allListener).toHaveBeenCalledWith({
         method: 'Debugger.scriptParsed',
         params: {script: 'details'},
         sessionId: 'root',
+        targetType: 'page',
       });
       expect(allListener).toHaveBeenCalledWith({
         method: 'Animation.animationCreated',
         params: {id: 'animated'},
         sessionId: 'iframe',
+        targetType: 'iframe',
       });
     });
 
     it('should stop listening for protocol events', async () => {
       const rootSession = createCdpSession('root');
       // Still mock command responses at session level.
-      rootSession.send = createMockSendCommandFn({useSessionId: false})
+      rootSession.send = createMockSendCommandFn()
         .mockResponse('Page.enable')
+        .mockResponse('Page.getFrameTree', {frameTree: {frame: {id: ''}}})
+        .mockResponse('Runtime.enable')
         .mockResponse('Target.getTargetInfo', {targetInfo})
         .mockResponse('Network.enable')
         .mockResponse('Target.setAutoAttach')

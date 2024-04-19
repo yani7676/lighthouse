@@ -1,16 +1,19 @@
 /**
- * @license Copyright 2020 The Lighthouse Authors. All Rights Reserved.
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the License. You may obtain a copy of the License at http://www.apache.org/licenses/LICENSE-2.0
- * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific language governing permissions and limitations under the License.
+ * @license
+ * Copyright 2020 Google LLC
+ * SPDX-License-Identifier: Apache-2.0
  */
 
 import jestMock from 'jest-mock';
 
-import * as lighthouse from '../../api.js';
+import * as api from '../../index.js';
 import {createTestState, getAuditsBreakdown} from './pptr-test-utils.js';
-import {LH_ROOT} from '../../../root.js';
+import {LH_ROOT} from '../../../shared/root.js';
+import {TargetManager} from '../../gather/driver/target-manager.js';
 
-describe('Fraggle Rock API', function() {
+const doubleRaf = 'new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)))';
+
+describe('Individual modes API', function() {
   // eslint-disable-next-line no-invalid-this
   this.timeout(120_000);
 
@@ -30,20 +33,19 @@ describe('Fraggle Rock API', function() {
   describe('snapshot', () => {
     beforeEach(() => {
       const {server} = state;
-      server.baseDir = `${LH_ROOT}/core/test/fixtures/fraggle-rock/snapshot-basic`;
+      server.baseDir = `${LH_ROOT}/core/test/fixtures/user-flows/snapshot-basic`;
     });
 
     it('should compute accessibility results on the page as-is', async () => {
       await setupTestPage();
 
-      const result = await lighthouse.snapshot({page: state.page});
+      const result = await api.snapshot(state.page);
       if (!result) throw new Error('Lighthouse failed to produce a result');
 
       const {lhr, artifacts} = result;
       const url = `${state.serverBaseUrl}/onclick.html#done`;
       expect(artifacts.URL).toEqual({
-        initialUrl: url,
-        finalUrl: url,
+        finalDisplayedUrl: url,
       });
 
       const accessibility = lhr.categories.accessibility;
@@ -60,25 +62,36 @@ describe('Fraggle Rock API', function() {
   describe('startTimespan', () => {
     beforeEach(() => {
       const {server} = state;
-      server.baseDir = `${LH_ROOT}/core/test/fixtures/fraggle-rock/snapshot-basic`;
+      server.baseDir = `${LH_ROOT}/core/test/fixtures/user-flows/snapshot-basic`;
     });
 
     it('should compute ConsoleMessage results across a span of time', async () => {
-      const run = await lighthouse.startTimespan({page: state.page});
+      const run = await api.startTimespan(state.page, {
+        config: {
+          extends: 'lighthouse:default',
+          audits: [
+            {path: 'bootup-time', options: {thresholdInMs: 10}},
+          ],
+        },
+      });
 
       await setupTestPage();
 
       // Wait long enough to ensure a paint after button interaction.
-      await state.page.waitForTimeout(200);
+      await state.page.evaluate(doubleRaf);
 
       const result = await run.endTimespan();
       if (!result) throw new Error('Lighthouse failed to produce a result');
 
       const {lhr, artifacts} = result;
+      state.saveTrace(artifacts.Trace);
       expect(artifacts.URL).toEqual({
-        initialUrl: 'about:blank',
-        finalUrl: `${state.serverBaseUrl}/onclick.html#done`,
+        finalDisplayedUrl: `${state.serverBaseUrl}/onclick.html#done`,
       });
+
+      expect(lhr.runWarnings).toHaveLength(1);
+      expect(lhr.runWarnings[0])
+        .toMatch(/A page navigation was detected during the run. Using timespan mode/);
 
       const bestPractices = lhr.categories['best-practices'];
       expect(bestPractices.score).toBeLessThan(1);
@@ -119,25 +132,25 @@ describe('Fraggle Rock API', function() {
 
     it('should compute results from timespan after page load', async () => {
       const {page, serverBaseUrl} = state;
-      const initialUrl = `${serverBaseUrl}/onclick.html`;
-      await page.goto(initialUrl);
+      await page.goto(`${serverBaseUrl}/onclick.html`);
       await page.waitForSelector('button');
 
-      const run = await lighthouse.startTimespan({page});
+      const run = await api.startTimespan(state.page);
 
       await page.click('button');
       await page.waitForSelector('input');
 
       // Wait long enough to ensure a paint after button interaction.
-      await page.waitForTimeout(200);
+      await page.evaluate(doubleRaf);
 
       const result = await run.endTimespan();
 
       if (!result) throw new Error('Lighthouse failed to produce a result');
 
+      state.saveTrace(result.artifacts.Trace);
+
       expect(result.artifacts.URL).toEqual({
-        initialUrl,
-        finalUrl: `${initialUrl}#done`,
+        finalDisplayedUrl: `${serverBaseUrl}/onclick.html#done`,
       });
 
       const {auditResults, erroredAudits, notApplicableAudits} = getAuditsBreakdown(result.lhr);
@@ -148,26 +161,116 @@ describe('Fraggle Rock API', function() {
 
       expect(erroredAudits).toHaveLength(0);
     });
+
+    // eslint-disable-next-line max-len
+    it('should know target type of network requests from frames created before timespan', async () => {
+      const spy = jestMock.spyOn(TargetManager.prototype, '_onExecutionContextCreated');
+      state.server.baseDir = `${LH_ROOT}/cli/test/fixtures`;
+      const {page, serverBaseUrl} = state;
+
+      await page.goto(`${serverBaseUrl}/oopif-scripts-timespan.html`);
+
+      const run = await api.startTimespan(state.page);
+      for (const iframe of page.frames()) {
+        if (iframe.url().includes('/oopif-simple-page.html')) {
+          await iframe.click('button');
+        }
+      }
+      await page.waitForNetworkIdle().catch(() => {});
+      const result = await run.endTimespan();
+
+      if (!result) throw new Error('Lighthouse failed to produce a result');
+
+      state.saveTrace(result.artifacts.Trace);
+
+      const networkRequestsDetails = /** @type {LH.Audit.Details.Table} */ (
+        result.lhr.audits['network-requests'].details);
+      const networkRequests = networkRequestsDetails?.items
+        .map((r) => ({url: r.url, sessionTargetType: r.sessionTargetType}))
+        // @ts-expect-error
+        .sort((a, b) => a.url.localeCompare(b.url));
+
+      // These results will differ slightly from `yarn smoke oopif-scripts`
+      // The main worker requests will be assigned to the worker instead of the worker's parent
+      // This is because this test launches Chrome using puppeteer instead of Chrome launcher,
+      // and Puppeteer uses the flag `--disable-field-trial-config`
+      expect(networkRequests).toMatchInlineSnapshot(`
+Array [
+  Object {
+    "sessionTargetType": "page",
+    "url": "http://localhost:10200/simple-script.js",
+  },
+  Object {
+    "sessionTargetType": "worker",
+    "url": "http://localhost:10200/simple-script.js?esm",
+  },
+  Object {
+    "sessionTargetType": "worker",
+    "url": "http://localhost:10200/simple-script.js?importScripts",
+  },
+  Object {
+    "sessionTargetType": "page",
+    "url": "http://localhost:10200/simple-worker.js",
+  },
+  Object {
+    "sessionTargetType": "worker",
+    "url": "http://localhost:10200/simple-worker.mjs",
+  },
+  Object {
+    "sessionTargetType": "iframe",
+    "url": "http://localhost:10503/simple-script.js",
+  },
+  Object {
+    "sessionTargetType": "worker",
+    "url": "http://localhost:10503/simple-script.js?esm",
+  },
+  Object {
+    "sessionTargetType": "worker",
+    "url": "http://localhost:10503/simple-script.js?importScripts",
+  },
+  Object {
+    "sessionTargetType": "iframe",
+    "url": "http://localhost:10503/simple-worker.js",
+  },
+  Object {
+    "sessionTargetType": "worker",
+    "url": "http://localhost:10503/simple-worker.mjs",
+  },
+]
+`);
+
+      // Check that TargetManager is getting execution context created events even if connecting
+      // to the page after they already exist.
+      // There are two execution contexts, one for the main frame and one for the iframe of
+      // the same origin.
+      const contextCreatedMainFrameCalls =
+        spy.mock.calls.filter(call => call[0].context.origin === 'http://localhost:10200');
+      // For some reason, puppeteer gives us two created events for every uniqueId,
+      // so using Set here to ignore that detail.
+      expect(new Set(contextCreatedMainFrameCalls.map(call => call[0].context.uniqueId)).size)
+        .toEqual(2);
+      spy.mockRestore();
+    });
   });
 
   describe('navigation', () => {
     beforeEach(() => {
       const {server} = state;
-      server.baseDir = `${LH_ROOT}/core/test/fixtures/fraggle-rock/navigation-basic`;
+      server.baseDir = `${LH_ROOT}/core/test/fixtures/user-flows/navigation-basic`;
     });
 
     it('should compute both snapshot & timespan results', async () => {
       const {page, serverBaseUrl} = state;
       const url = `${serverBaseUrl}/index.html`;
-      const result = await lighthouse.navigation(url, {page});
+      const result = await api.navigation(page, url);
       if (!result) throw new Error('Lighthouse failed to produce a result');
 
       const {lhr, artifacts} = result;
+      state.saveTrace(artifacts.Trace);
       expect(artifacts.URL).toEqual({
-        initialUrl: 'about:blank',
         requestedUrl: url,
         mainDocumentUrl: url,
-        finalUrl: url,
+        finalDisplayedUrl: url,
       });
 
       const {auditResults, failedAudits, erroredAudits} = getAuditsBreakdown(lhr);
@@ -191,28 +294,27 @@ describe('Fraggle Rock API', function() {
 
     it('should compute results with callback requestor', async () => {
       const {page, serverBaseUrl} = state;
-      const initialUrl = `${serverBaseUrl}/links-to-index.html`;
       const requestedUrl = `${serverBaseUrl}/?redirect=/index.html`;
       const mainDocumentUrl = `${serverBaseUrl}/index.html`;
-      await page.goto(initialUrl);
+      await page.goto(`${serverBaseUrl}/links-to-index.html`);
 
       const requestor = jestMock.fn(async () => {
         await page.click('a');
       });
 
-      const result = await lighthouse.navigation(requestor, {page});
+      const result = await api.navigation(page, requestor);
       if (!result) throw new Error('Lighthouse failed to produce a result');
 
       expect(requestor).toHaveBeenCalled();
 
       const {lhr, artifacts} = result;
+      state.saveTrace(artifacts.Trace);
       expect(lhr.requestedUrl).toEqual(requestedUrl);
-      expect(lhr.finalUrl).toEqual(mainDocumentUrl);
+      expect(lhr.finalDisplayedUrl).toEqual(mainDocumentUrl);
       expect(artifacts.URL).toEqual({
-        initialUrl,
         requestedUrl,
         mainDocumentUrl,
-        finalUrl: mainDocumentUrl,
+        finalDisplayedUrl: mainDocumentUrl,
       });
 
       const {auditResults, failedAudits, erroredAudits} = getAuditsBreakdown(lhr);

@@ -1,13 +1,13 @@
 /**
- * @license Copyright 2017 The Lighthouse Authors. All Rights Reserved.
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the License. You may obtain a copy of the License at http://www.apache.org/licenses/LICENSE-2.0
- * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific language governing permissions and limitations under the License.
+ * @license
+ * Copyright 2017 Google LLC
+ * SPDX-License-Identifier: Apache-2.0
  */
 'use strict';
 
 /* eslint-disable no-irregular-whitespace */
 
-import {strict as assert} from 'assert';
+import assert from 'assert/strict';
 import fs from 'fs';
 
 import csvValidator from 'csv-validator';
@@ -16,6 +16,7 @@ import {ReportGenerator} from '../../generator/report-generator.js';
 import {readJson} from '../../../core/test/test-utils.js';
 
 const sampleResults = readJson('core/test/results/sample_v2.json');
+const sampleFlowResult = readJson('core/test/fixtures/user-flows/reports/sample-flow-result.json');
 
 describe('ReportGenerator', () => {
   describe('#replaceStrings', () => {
@@ -75,8 +76,19 @@ describe('ReportGenerator', () => {
       assert.doesNotThrow(_ => JSON.parse(jsonOutput));
     });
 
+    it('creates JSON for flow result', () => {
+      const jsonOutput = ReportGenerator.generateReport(sampleFlowResult, 'json');
+      assert.doesNotThrow(_ => JSON.parse(jsonOutput));
+    });
+
     it('creates HTML for results', () => {
       const htmlOutput = ReportGenerator.generateReport(sampleResults, 'html');
+      assert.ok(/<!doctype/gim.test(htmlOutput));
+      assert.ok(/<html lang="en"/gim.test(htmlOutput));
+    });
+
+    it('creates HTML for flow result', () => {
+      const htmlOutput = ReportGenerator.generateReport(sampleFlowResult, 'html');
       assert.ok(/<!doctype/gim.test(htmlOutput));
       assert.ok(/<html lang="en"/gim.test(htmlOutput));
     });
@@ -90,21 +102,21 @@ describe('ReportGenerator', () => {
       const lines = csvOutput.split('\n');
       expect(lines.length).toBeGreaterThan(100);
       expect(lines.slice(0, 15).join('\n')).toMatchInlineSnapshot(`
-"\\"requestedUrl\\",\\"finalUrl\\",\\"fetchTime\\",\\"gatherMode\\"
-\\"http://localhost:10200/dobetterweb/dbw_tester.html\\",\\"http://localhost:10200/dobetterweb/dbw_tester.html\\",\\"2021-09-07T20:11:11.853Z\\",\\"navigation\\"
+"\\"requestedUrl\\",\\"finalDisplayedUrl\\",\\"fetchTime\\",\\"gatherMode\\"
+\\"http://localhost:10200/dobetterweb/dbw_tester.html\\",\\"http://localhost:10200/dobetterweb/dbw_tester.html\\",\\"2024-04-18T17:02:05.457Z\\",\\"navigation\\"
 
 category,score
-\\"performance\\",\\"0.26\\"
-\\"accessibility\\",\\"0.78\\"
-\\"best-practices\\",\\"0.27\\"
-\\"seo\\",\\"0.67\\"
-\\"pwa\\",\\"0.33\\"
+\\"performance\\",\\"0.32\\"
+\\"accessibility\\",\\"0.74\\"
+\\"best-practices\\",\\"0.36\\"
+\\"seo\\",\\"0.75\\"
 
 category,audit,score,displayValue,description
-\\"performance\\",\\"first-contentful-paint\\",\\"0.01\\",\\"6.8 s\\",\\"First Contentful Paint marks the time at which the first text or image is painted. [Learn more about the First Contentful Paint metric](https://web.dev/first-contentful-paint/).\\"
-\\"performance\\",\\"interactive\\",\\"0.41\\",\\"8.2 s\\",\\"Time to Interactive is the amount of time it takes for the page to become fully interactive. [Learn more about the Time to Interactive metric](https://web.dev/interactive/).\\"
-\\"performance\\",\\"speed-index\\",\\"0.21\\",\\"8.1 s\\",\\"Speed Index shows how quickly the contents of a page are visibly populated. [Learn more about the Speed Index metric](https://web.dev/speed-index/).\\"
-\\"performance\\",\\"total-blocking-time\\",\\"0.2\\",\\"1,220 ms\\",\\"Sum of all time periods between FCP and Time to Interactive, when task length exceeded 50ms, expressed in milliseconds. [Learn more about the Total Blocking Time metric](https://web.dev/lighthouse-total-blocking-time/).\\"
+\\"performance\\",\\"first-contentful-paint\\",\\"0.01\\",\\"6.8 s\\",\\"First Contentful Paint marks the time at which the first text or image is painted. [Learn more about the First Contentful Paint metric](https://developer.chrome.com/docs/lighthouse/performance/first-contentful-paint/).\\"
+\\"performance\\",\\"largest-contentful-paint\\",\\"0\\",\\"11.0 s\\",\\"Largest Contentful Paint marks the time at which the largest text or image is painted. [Learn more about the Largest Contentful Paint metric](https://developer.chrome.com/docs/lighthouse/performance/lighthouse-largest-contentful-paint/)\\"
+\\"performance\\",\\"total-blocking-time\\",\\"0.25\\",\\"1,070 ms\\",\\"Sum of all time periods between FCP and Time to Interactive, when task length exceeded 50ms, expressed in milliseconds. [Learn more about the Total Blocking Time metric](https://developer.chrome.com/docs/lighthouse/performance/lighthouse-total-blocking-time/).\\"
+\\"performance\\",\\"cumulative-layout-shift\\",\\"0.9\\",\\"0.1\\",\\"Cumulative Layout Shift measures the movement of visible elements within the viewport. [Learn more about the Cumulative Layout Shift metric](https://web.dev/articles/cls).\\"
+\\"performance\\",\\"speed-index\\",\\"0.18\\",\\"8.5 s\\",\\"Speed Index shows how quickly the contents of a page are visibly populated. [Learn more about the Speed Index metric](https://developer.chrome.com/docs/lighthouse/performance/speed-index/).\\"
 "
 `);
 
@@ -123,7 +135,12 @@ category,audit,score,displayValue,description
       expect(csvOutput).toContain('accessibility');
       expect(csvOutput).toContain('best-practices');
       expect(csvOutput).toContain('seo');
-      expect(csvOutput).toContain('pwa');
+    });
+
+    it('throws when creating CSV for flow result', () => {
+      expect(() => {
+        ReportGenerator.generateReport(sampleFlowResult, 'csv');
+      }).toThrow('CSV output is not support for user flows');
     });
 
     it('writes extended info', () => {

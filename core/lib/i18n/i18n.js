@@ -1,7 +1,7 @@
 /**
- * @license Copyright 2018 The Lighthouse Authors. All Rights Reserved.
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the License. You may obtain a copy of the License at http://www.apache.org/licenses/LICENSE-2.0
- * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific language governing permissions and limitations under the License.
+ * @license
+ * Copyright 2018 Google LLC
+ * SPDX-License-Identifier: Apache-2.0
  */
 
 /** @typedef {import('../../../shared/localization/locales').LhlMessages} LhlMessages */
@@ -13,10 +13,11 @@ import lookupClosestLocale from 'lookup-closest-locale';
 import log from 'lighthouse-logger';
 
 import {getAvailableLocales} from '../../../shared/localization/format.js';
-import {LH_ROOT} from '../../../root.js';
+import {LH_ROOT} from '../../../shared/root.js';
 import {isIcuMessage, formatMessage, DEFAULT_LOCALE} from '../../../shared/localization/format.js';
-import {getModulePath} from '../../../esm-utils.js';
+import {getModulePath} from '../../../shared/esm-utils.js';
 
+/* eslint-disable max-len */
 const UIStrings = {
   /** Used to show the duration in milliseconds that something lasted. The `{timeInMs}` placeholder will be replaced with the time duration, shown in milliseconds (e.g. 63 ms) */
   ms: '{timeInMs, number, milliseconds}\xa0ms',
@@ -56,8 +57,6 @@ const UIStrings = {
   columnName: 'Name',
   /** Label for a column in a data table; entries will be the locations of JavaScript or CSS code, e.g. the name of a Javascript package or module. */
   columnSource: 'Source',
-  /** Label for a column in a data table; entries will be how much a predetermined budget has been exeeded by. Depending on the context, this number could represent an excess in quantity or size of network requests, or, an excess in the duration of time that it takes for the page to load.*/
-  columnOverBudget: 'Over Budget',
   /** Label for a column in a data table; entries will be a representation of a DOM element. */
   columnElement: 'Element',
   /** Label for a column in a data table; entries will be the number of milliseconds since the page started loading. */
@@ -113,6 +112,7 @@ const UIStrings = {
   /** Table item value for the severity of a high impact, or dangerous vulnerability. Part of a ranking scale in the form: low, medium, high. */
   itemSeverityHigh: 'High',
 };
+/* eslint-enable max-len */
 
 /**
  * Look up the best available locale for the requested language through these fall backs:
@@ -123,7 +123,7 @@ const UIStrings = {
  * If `locale` isn't provided or one could not be found, DEFAULT_LOCALE is returned.
  *
  * By default any of the locales Lighthouse has strings for can be returned, but this
- * can be overriden with `possibleLocales`, useful e.g. when Lighthouse is bundled and
+ * can be overridden with `possibleLocales`, useful e.g. when Lighthouse is bundled and
  * only DEFAULT_LOCALE is available, but `possibleLocales` can be used to select a
  * locale available to be downloaded on demand.
  * @param {string|string[]=} locales
@@ -168,10 +168,15 @@ function lookupLocale(locales, possibleLocales) {
  * Returns a function that generates `LH.IcuMessage` objects to localize the
  * messages in `fileStrings` and the shared `i18n.UIStrings`.
  * @param {string} filename
- * @param {Record<string, string>} fileStrings
+ * @param {Record<string, string>=} fileStrings
  */
-function createIcuMessageFn(filename, fileStrings) {
+function createIcuMessageFn(filename, fileStrings = {}) {
   if (filename.startsWith('file://')) filename = url.fileURLToPath(filename);
+
+  // In the common case, `filename` is an absolute path that needs to be transformed
+  // to be relative to LH_ROOT. In other cases, `filename` might be the exact i18n identifier
+  // already (see: stack-packs.js, or bundled lighthouse).
+  if (path.isAbsolute(filename)) filename = path.relative(LH_ROOT, filename);
 
   /**
    * Combined so fn can access both caller's strings and i18n.UIStrings shared across LH.
@@ -189,8 +194,12 @@ function createIcuMessageFn(filename, fileStrings) {
     const keyname = Object.keys(mergedStrings).find(key => mergedStrings[key] === message);
     if (!keyname) throw new Error(`Could not locate: ${message}`);
 
-    const filenameToLookup = keyname in fileStrings ? filename : getModulePath(import.meta);
-    const unixStyleFilename = path.relative(LH_ROOT, filenameToLookup).replace(/\\/g, '/');
+    // `message` can be a UIString defined within the provided `fileStrings`, or it could be
+    // one of the common strings found in `i18n.UIStrings`.
+    const filenameToLookup = keyname in fileStrings ?
+      filename :
+      path.relative(LH_ROOT, getModulePath(import.meta));
+    const unixStyleFilename = filenameToLookup.replace(/\\/g, '/');
     const i18nId = `${unixStyleFilename} | ${keyname}`;
 
     return {

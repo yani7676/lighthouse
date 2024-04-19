@@ -1,7 +1,7 @@
 /**
- * @license Copyright 2021 The Lighthouse Authors. All Rights Reserved.
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the License. You may obtain a copy of the License at http://www.apache.org/licenses/LICENSE-2.0
- * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific language governing permissions and limitations under the License.
+ * @license
+ * Copyright 2021 Google LLC
+ * SPDX-License-Identifier: Apache-2.0
  */
 
 import {getBaseArtifacts, finalizeArtifacts} from '../../gather/base-artifacts.js';
@@ -30,42 +30,41 @@ describe('getBaseArtifacts', () => {
   });
 
   it('should fetch benchmark index', async () => {
-    const {config} = await initializeConfig('navigation');
-    const artifacts = await getBaseArtifacts(config, driverMock.asDriver(), {gatherMode});
+    const {resolvedConfig} = await initializeConfig('navigation');
+    const artifacts = await getBaseArtifacts(resolvedConfig, driverMock.asDriver(), {gatherMode});
     expect(artifacts.BenchmarkIndex).toEqual(500);
   });
 
   it('should fetch host user agent', async () => {
-    const {config} = await initializeConfig('navigation');
-    const artifacts = await getBaseArtifacts(config, driverMock.asDriver(), {gatherMode});
+    const {resolvedConfig} = await initializeConfig('navigation');
+    const artifacts = await getBaseArtifacts(resolvedConfig, driverMock.asDriver(), {gatherMode});
     expect(artifacts.HostUserAgent).toContain('Macintosh');
     expect(artifacts.HostFormFactor).toEqual('desktop');
   });
 
   it('should return settings', async () => {
-    const {config} = await initializeConfig('navigation');
-    const artifacts = await getBaseArtifacts(config, driverMock.asDriver(), {gatherMode});
-    expect(artifacts.settings).toEqual(config.settings);
+    const {resolvedConfig} = await initializeConfig('navigation');
+    const artifacts = await getBaseArtifacts(resolvedConfig, driverMock.asDriver(), {gatherMode});
+    expect(artifacts.settings).toEqual(resolvedConfig.settings);
   });
 });
 
 describe('finalizeArtifacts', () => {
-  /** @type {LH.FRBaseArtifacts} */
+  /** @type {LH.BaseArtifacts} */
   let baseArtifacts;
   /** @type {Partial<LH.Artifacts>} */
   let gathererArtifacts = {};
 
   beforeEach(async () => {
-    const {config} = await initializeConfig(gatherMode);
+    const {resolvedConfig} = await initializeConfig(gatherMode);
     const driver = getMockDriverForArtifacts().asDriver();
-    baseArtifacts = await getBaseArtifacts(config, driver, {gatherMode});
-    baseArtifacts.URL = {initialUrl: 'about:blank', finalUrl: 'https://example.com'};
+    baseArtifacts = await getBaseArtifacts(resolvedConfig, driver, {gatherMode});
+    baseArtifacts.URL = {finalDisplayedUrl: 'https://example.com'};
     gathererArtifacts = {};
   });
 
   it('should merge the two objects', () => {
     baseArtifacts.LighthouseRunWarnings = [{i18nId: '1', formattedDefault: 'Yes'}];
-    gathererArtifacts.LighthouseRunWarnings = [{i18nId: '2', formattedDefault: 'No'}];
     gathererArtifacts.HostUserAgent = 'Desktop Chrome';
 
     const winningError = new LighthouseError(LighthouseError.errors.NO_LCP);
@@ -85,7 +84,6 @@ describe('finalizeArtifacts', () => {
       RobotsTxt: {status: 404, content: null},
       LighthouseRunWarnings: [
         {i18nId: '1', formattedDefault: 'Yes'},
-        {i18nId: '2', formattedDefault: 'No'},
       ],
     });
   });
@@ -109,38 +107,28 @@ describe('finalizeArtifacts', () => {
       {i18nId: '1', formattedDefault: 'Yes', values: {test: 1}},
       {i18nId: '1', formattedDefault: 'Yes', values: {test: 2}},
     ];
-    gathererArtifacts.LighthouseRunWarnings = [
-      {i18nId: '1', formattedDefault: 'Yes', values: {test: 1}},
-      {i18nId: '1', formattedDefault: 'Yes', values: {test: 3}},
-      {i18nId: '2', formattedDefault: 'No'},
-    ];
 
     const artifacts = finalizeArtifacts(baseArtifacts, gathererArtifacts);
     expect(artifacts.LighthouseRunWarnings).toEqual([
       {i18nId: '1', formattedDefault: 'Yes', values: {test: 1}},
       {i18nId: '1', formattedDefault: 'Yes', values: {test: 2}},
-      {i18nId: '1', formattedDefault: 'Yes', values: {test: 3}},
-      {i18nId: '2', formattedDefault: 'No'},
     ]);
   });
 
   it('should throw if URL was not set', () => {
     const run = () => finalizeArtifacts(baseArtifacts, gathererArtifacts);
 
-    baseArtifacts.URL = {initialUrl: 'about:blank', finalUrl: 'https://example.com'};
+    baseArtifacts.URL = {finalDisplayedUrl: 'https://example.com'};
     expect(run).not.toThrow();
 
-    baseArtifacts.URL = {initialUrl: '', finalUrl: ''};
-    expect(run).toThrowError(/initialUrl/);
-
-    baseArtifacts.URL = {initialUrl: 'about:blank', finalUrl: ''};
-    expect(run).toThrowError(/finalUrl/);
+    baseArtifacts.URL = {finalDisplayedUrl: ''};
+    expect(run).toThrowError(/finalDisplayedUrl/);
   });
 
   it('should not throw if URL was not set for an error reason', () => {
     const run = () => finalizeArtifacts(baseArtifacts, gathererArtifacts);
 
-    baseArtifacts.URL = {initialUrl: 'about:blank', finalUrl: ''};
+    baseArtifacts.URL = {requestedUrl: 'https://example.com', finalDisplayedUrl: ''};
     baseArtifacts.PageLoadError = new LighthouseError(LighthouseError.errors.PAGE_HUNG);
     expect(run).not.toThrow();
   });

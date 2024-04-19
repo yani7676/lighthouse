@@ -5,8 +5,8 @@
 Setup:
 
 ```sh
-# Lighthouse requires Node 14 LTS (14.x) or later.
-curl -sL https://deb.nodesource.com/setup_14.x | sudo -E bash - &&\
+# Lighthouse requires Node 18 LTS (18.x) or later.
+curl -sL https://deb.nodesource.com/setup_18.x | sudo -E bash - &&\
 sudo apt-get install -y nodejs npm
 
 # get chromium (stable)
@@ -22,13 +22,18 @@ Kick off run of Lighthouse using headless Chrome:
 lighthouse --chrome-flags="--headless" https://github.com
 ```
 
+## (CLI headless=new)
+
+There is also the new `--headless=new` option, which includes functionality that
+was explicitly omitted from the original headless browser.
+
 ## CLI (xvfb)
 
 Alternatively, you can run full Chrome + xvfb instead of headless mode. These steps worked on Debian Jessie:
 
 ```sh
-# get node 14
-curl -sL https://deb.nodesource.com/setup_14.x | sudo -E bash -
+# get node 18
+curl -sL https://deb.nodesource.com/setup_18.x | sudo -E bash -
 sudo apt-get install -y nodejs npm
 
 # get chromium (stable) and Xvfb
@@ -46,7 +51,7 @@ TMP_PROFILE_DIR=$(mktemp -d -t lighthouse.XXXXXXXXXX)
 
 # start up chromium inside xvfb
 xvfb-run --server-args='-screen 0, 1024x768x16' \
-    chromium-browser --user-data-dir=$TMP_PROFILE_DIR
+    chromium-browser --user-data-dir=$TMP_PROFILE_DIR \
     --start-maximized \
     --no-first-run \
     --remote-debugging-port=9222 "about:blank"

@@ -7,26 +7,24 @@ internals, see [Lighthouse Architecture](architecture.md).
 The example below shows how to run Lighthouse programmatically as a Node module. It
 assumes you've installed Lighthouse as a dependency (`yarn add --dev lighthouse`).
 
-```javascript
-const fs = require('fs');
-const lighthouse = require('lighthouse');
-const chromeLauncher = require('chrome-launcher');
+```js
+import fs from 'fs';
+import lighthouse from 'lighthouse';
+import * as chromeLauncher from 'chrome-launcher';
 
-(async () => {
-  const chrome = await chromeLauncher.launch({chromeFlags: ['--headless']});
-  const options = {logLevel: 'info', output: 'html', onlyCategories: ['performance'], port: chrome.port};
-  const runnerResult = await lighthouse('https://example.com', options);
+const chrome = await chromeLauncher.launch({chromeFlags: ['--headless']});
+const options = {logLevel: 'info', output: 'html', onlyCategories: ['performance'], port: chrome.port};
+const runnerResult = await lighthouse('https://example.com', options);
 
-  // `.report` is the HTML report as a string
-  const reportHtml = runnerResult.report;
-  fs.writeFileSync('lhreport.html', reportHtml);
+// `.report` is the HTML report as a string
+const reportHtml = runnerResult.report;
+fs.writeFileSync('lhreport.html', reportHtml);
 
-  // `.lhr` is the Lighthouse Result as a JS object
-  console.log('Report is done for', runnerResult.lhr.finalUrl);
-  console.log('Performance score was', runnerResult.lhr.categories.performance.score * 100);
+// `.lhr` is the Lighthouse Result as a JS object
+console.log('Report is done for', runnerResult.lhr.finalDisplayedUrl);
+console.log('Performance score was', runnerResult.lhr.categories.performance.score * 100);
 
-  await chrome.kill();
-})();
+await chrome.kill();
 ```
 
 ### Performance-only Lighthouse run
@@ -35,16 +33,15 @@ Many modules consuming Lighthouse are only interested in the performance numbers
 You can limit the audits you run to a particular category or set of audits.
 
 ```js
-// ...
 const flags = {onlyCategories: ['performance']};
-launchChromeAndRunLighthouse(url, flags).then( // ...
+await lighthouse(url, flags);
 ```
 
 You can also craft your own config (e.g. [experimental-config.js](https://github.com/GoogleChrome/lighthouse/blob/main/core/config/experimental-config.js)) for custom runs. Also see the [basic custom audit recipe](https://github.com/GoogleChrome/lighthouse/tree/main/docs/recipes/custom-audit).
 
 ### Differences from CLI flags
 
-Note that some flag functionality is only available to the CLI. The set of shared flags that work in both node and CLI can be found [in our typedefs](https://github.com/GoogleChrome/lighthouse/blob/888bd6dc9d927a734a8e20ea8a0248baa5b425ed/typings/externs.d.ts#L82-L119). In most cases, the functionality is not offered in the node module simply because it is easier and more flexible to do it yourself.
+Note that some flag functionality is only available to the CLI. The set of shared flags that work in both node and CLI can be found [in our typedefs](https://github.com/GoogleChrome/lighthouse/blob/main/types/lhr/settings.d.ts#:~:text=interface%20SharedFlagsSettings). In most cases, the functionality is not offered in the node module simply because it is easier and more flexible to do it yourself.
 
 | CLI Flag | Differences in Node |
 | - | - |
@@ -68,8 +65,7 @@ the `logLevel` flag when calling `lighthouse`.
 
 ```javascript
 const flags = {logLevel: 'info'};
-
-launchChromeAndRunLighthouse('https://example.com', flags).then(...);
+await lighthouse('https://example.com', flags);
 ```
 
 ## Configuration
@@ -115,7 +111,7 @@ Alternatively, you can instruct Chrome to ignore the invalid certificate by addi
 
 Lighthouse can run against a real mobile device. You can follow the [Remote Debugging on Android (Legacy Workflow)](https://developer.chrome.com/devtools/docs/remote-debugging-legacy) up through step 3.3, but the TL;DR is install & run adb, enable USB debugging, then port forward 9222 from the device to the machine with Lighthouse.
 
-You'll likely want to use the CLI flags `--screenEmulation.disabled --throttling.cpuSlowdownMultiplier=1` to disable any additional emulation.
+You'll likely want to use the CLI flags `--screenEmulation.disabled --throttling.cpuSlowdownMultiplier=1 --throttling-method=provided` to disable any additional emulation.
 
 ```sh
 $ adb kill-server
@@ -127,12 +123,12 @@ $ adb devices -l
 
 $ adb forward tcp:9222 localabstract:chrome_devtools_remote
 
-$ lighthouse --port=9222 --screenEmulation.disabled --throttling.cpuSlowdownMultiplier=1 https://example.com
+$ lighthouse --port=9222 --screenEmulation.disabled --throttling.cpuSlowdownMultiplier=1 --throttling-method=provided https://example.com
 ```
 
 ## Lighthouse as trace processor
 
-Lighthouse can be used to analyze trace and performance data collected from other tools (like WebPageTest and ChromeDriver). The `traces` and `devtoolsLogs` artifact items can be provided using a string for the absolute path on disk if they're saved with `.trace.json` and `.devtoolslog.json` file extensions, respectively. The `devtoolsLogs` array is captured from the `Network` and `Page` domains (a la ChromeDriver's [enableNetwork and enablePage options](https://sites.google.com/a/chromium.org/chromedriver/capabilities#TOC-perfLoggingPrefs-object)).
+Lighthouse can be used to analyze trace and performance data collected from other tools (like WebPageTest and ChromeDriver). The `Trace` and `DevtoolsLog` artifact items can be provided using a string for the absolute path on disk if they're saved with `.trace.json` and `.devtoolslog.json` file extensions, respectively. The `DevtoolsLog` array is captured from the `Network` and `Page` domains (a la ChromeDriver's [enableNetwork and enablePage options](https://sites.google.com/a/chromium.org/chromedriver/capabilities#TOC-perfLoggingPrefs-object)).
 
 As an example, here's a trace-only run that reports on user timings and critical request chains:
 
@@ -147,7 +143,6 @@ As an example, here's a trace-only run that reports on user timings and critical
     "user-timings",
     "critical-request-chains"
   ],
-
   "categories": {
     "performance": {
       "name": "Performance Metrics",

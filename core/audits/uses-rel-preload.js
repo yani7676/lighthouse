@@ -1,13 +1,12 @@
 /**
- * @license Copyright 2017 The Lighthouse Authors. All Rights Reserved.
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the License. You may obtain a copy of the License at http://www.apache.org/licenses/LICENSE-2.0
- * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific language governing permissions and limitations under the License.
+ * @license
+ * Copyright 2017 Google LLC
+ * SPDX-License-Identifier: Apache-2.0
  */
 
 import UrlUtils from '../lib/url-utils.js';
 import {NetworkRequest} from '../lib/network-request.js';
 import {Audit} from './audit.js';
-import {ByteEfficiencyAudit} from './byte-efficiency/byte-efficiency-audit.js';
 import {CriticalRequestChains} from '../computed/critical-request-chains.js';
 import * as i18n from '../lib/i18n/i18n.js';
 import {MainResource} from '../computed/main-resource.js';
@@ -17,10 +16,10 @@ import {LoadSimulator} from '../computed/load-simulator.js';
 const UIStrings = {
   /** Imperative title of a Lighthouse audit that tells the user to use <link rel=preload> to initiate important network requests earlier during page load. This is displayed in a list of audit titles that Lighthouse generates. */
   title: 'Preload key requests',
-  /** Description of a Lighthouse audit that tells the user *why* they should preload important network requests. The associated network requests are started halfway through pageload (or later) but should be started at the beginning. This is displayed after a user expands the section to see more. No character length limits. '<link rel=preload>' is the html code the user would include in their page and shouldn't be translated. 'Learn More' becomes link text to additional documentation. */
+  /** Description of a Lighthouse audit that tells the user *why* they should preload important network requests. The associated network requests are started halfway through pageload (or later) but should be started at the beginning. This is displayed after a user expands the section to see more. No character length limits. '<link rel=preload>' is the html code the user would include in their page and shouldn't be translated. The last sentence starting with 'Learn' becomes link text to additional documentation. */
   description: 'Consider using `<link rel=preload>` to prioritize fetching resources that are ' +
     'currently requested later in page load. ' +
-    '[Learn how to preload key requests](https://web.dev/uses-rel-preload/).',
+    '[Learn how to preload key requests](https://developer.chrome.com/docs/lighthouse/performance/uses-rel-preload/).',
   /**
    * @description A warning message that is shown when the user tried to follow the advice of the audit, but it's not working as expected. Forgetting to set the `crossorigin` HTML attribute, or setting it to an incorrect value, on the link is a common mistake when adding preload links.
    * @example {https://example.com} preloadURL
@@ -43,8 +42,9 @@ class UsesRelPreloadAudit extends Audit {
       title: str_(UIStrings.title),
       description: str_(UIStrings.description),
       supportedModes: ['navigation'],
+      guidanceLevel: 3,
       requiredArtifacts: ['devtoolsLogs', 'traces', 'URL'],
-      scoreDisplayMode: Audit.SCORING_MODES.NUMERIC,
+      scoreDisplayMode: Audit.SCORING_MODES.METRIC_SAVINGS,
     };
   }
 
@@ -143,9 +143,9 @@ class UsesRelPreloadAudit extends Audit {
       return {wastedMs: 0, results: []};
     }
 
-    // Preload changes the ordering of requests, simulate the original graph with flexible ordering
+    // Preload changes the ordering of requests, simulate the original graph
     // to have a reasonable baseline for comparison.
-    const simulationBeforeChanges = simulator.simulate(graph, {flexibleOrdering: true});
+    const simulationBeforeChanges = simulator.simulate(graph);
     const modifiedGraph = graph.cloneWithRelationships();
 
     /** @type {Array<LH.Gatherer.Simulation.GraphNetworkNode>} */
@@ -174,8 +174,8 @@ class UsesRelPreloadAudit extends Audit {
       node.addDependency(mainDocumentNode);
     }
 
-    // Once we've modified the dependencies, simulate the new graph with flexible ordering.
-    const simulationAfterChanges = simulator.simulate(modifiedGraph, {flexibleOrdering: true});
+    // Once we've modified the dependencies, simulate the new graph.
+    const simulationAfterChanges = simulator.simulate(modifiedGraph);
     const originalNodesByRecord = Array.from(simulationBeforeChanges.nodeTimings.keys())
         // @ts-expect-error we don't care if all nodes without a record collect on `undefined`
         .reduce((map, node) => map.set(node.record, node), new Map());
@@ -209,7 +209,7 @@ class UsesRelPreloadAudit extends Audit {
    * @param {LH.Audit.Context} context
    * @return {Promise<LH.Audit.Product>}
    */
-  static async audit_(artifacts, context) {
+  static async audit(artifacts, context) {
     const trace = artifacts.traces[UsesRelPreloadAudit.DEFAULT_PASS];
     const devtoolsLog = artifacts.devtoolsLogs[UsesRelPreloadAudit.DEFAULT_PASS];
     const URL = artifacts.URL;
@@ -239,10 +239,11 @@ class UsesRelPreloadAudit extends Audit {
       {key: 'url', valueType: 'url', label: str_(i18n.UIStrings.columnURL)},
       {key: 'wastedMs', valueType: 'timespanMs', label: str_(i18n.UIStrings.columnWastedMs)},
     ];
-    const details = Audit.makeOpportunityDetails(headings, results, wastedMs);
+    const details = Audit.makeOpportunityDetails(headings, results,
+      {overallSavingsMs: wastedMs, sortedBy: ['wastedMs']});
 
     return {
-      score: ByteEfficiencyAudit.scoreForWastedMs(wastedMs),
+      score: results.length ? 0 : 1,
       numericValue: wastedMs,
       numericUnit: 'millisecond',
       displayValue: wastedMs ?
@@ -251,15 +252,6 @@ class UsesRelPreloadAudit extends Audit {
       details,
       warnings,
     };
-  }
-
-  /**
-   * @return {Promise<LH.Audit.Product>}
-   */
-  static async audit() {
-    // Preload advice is on hold until https://github.com/GoogleChrome/lighthouse/issues/11960
-    // is resolved.
-    return {score: 1, notApplicable: true, details: Audit.makeOpportunityDetails([], [], 0)};
   }
 }
 

@@ -1,13 +1,14 @@
 #!/usr/bin/env bash
 
 ##
-# @license Copyright 2022 The Lighthouse Authors. All Rights Reserved.
-# Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the License. You may obtain a copy of the License at http://www.apache.org/licenses/LICENSE-2.0
-# Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific language governing permissions and limitations under the License.
+# @license
+# Copyright 2022 Google LLC
+# SPDX-License-Identifier: Apache-2.0
 ##
 
 # Setup dependencies for devtools e2e tests.
 # Set SKIP_DOWNLOADS to skip all the downloading and just export variables.
+# Set BUILD_FOLDER to use a folder other than 'LighthouseIntegration' (ex: Default to use out/Default).
 
 set -euo pipefail
 
@@ -17,6 +18,7 @@ TEST_DIR="$LH_ROOT/.tmp/chromium-web-tests"
 
 export DEPOT_TOOLS_PATH="$TEST_DIR/depot-tools"
 export DEVTOOLS_PATH=${DEVTOOLS_PATH:-"$TEST_DIR/devtools/devtools-frontend"}
+export BUILD_FOLDER="${BUILD_FOLDER:-LighthouseIntegration}"
 
 if [ -z ${SKIP_DOWNLOADS+x} ]
 then

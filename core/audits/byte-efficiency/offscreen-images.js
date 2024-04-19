@@ -1,7 +1,7 @@
 /**
- * @license Copyright 2017 The Lighthouse Authors. All Rights Reserved.
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the License. You may obtain a copy of the License at http://www.apache.org/licenses/LICENSE-2.0
- * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific language governing permissions and limitations under the License.
+ * @license
+ * Copyright 2017 Google LLC
+ * SPDX-License-Identifier: Apache-2.0
  */
 /**
  * @fileoverview Checks to see if images are displayed only outside of the viewport.
@@ -20,11 +20,11 @@ import {ProcessedTrace} from '../../computed/processed-trace.js';
 const UIStrings = {
   /** Imperative title of a Lighthouse audit that tells the user to defer loading offscreen images. Offscreen images are images located outside of the visible browser viewport. As they are unseen by the user and slow down page load, they should be loaded later, closer to when the user is going to see them. This is displayed in a list of audit titles that Lighthouse generates. */
   title: 'Defer offscreen images',
-  /** Description of a Lighthouse audit that tells the user *why* they should defer loading offscreen images. Offscreen images are images located outside of the visible browser viewport. As they are unseen by the user and slow down page load, they should be loaded later, closer to when the user is going to see them. This is displayed after a user expands the section to see more. No character length limits. 'Learn More' becomes link text to additional documentation. */
+  /** Description of a Lighthouse audit that tells the user *why* they should defer loading offscreen images. Offscreen images are images located outside of the visible browser viewport. As they are unseen by the user and slow down page load, they should be loaded later, closer to when the user is going to see them. This is displayed after a user expands the section to see more. No character length limits. The last sentence starting with 'Learn' becomes link text to additional documentation. */
   description:
     'Consider lazy-loading offscreen and hidden images after all critical resources have ' +
     'finished loading to lower time to interactive. ' +
-    '[Learn how to defer offscreen images](https://web.dev/offscreen-images/).',
+    '[Learn how to defer offscreen images](https://developer.chrome.com/docs/lighthouse/performance/offscreen-images/).',
 };
 
 const str_ = i18n.createIcuMessageFn(import.meta.url, UIStrings);
@@ -48,8 +48,9 @@ class OffscreenImages extends ByteEfficiencyAudit {
       id: 'offscreen-images',
       title: str_(UIStrings.title),
       description: str_(UIStrings.description),
-      scoreDisplayMode: ByteEfficiencyAudit.SCORING_MODES.NUMERIC,
+      scoreDisplayMode: ByteEfficiencyAudit.SCORING_MODES.METRIC_SAVINGS,
       supportedModes: ['navigation'],
+      guidanceLevel: 2,
       requiredArtifacts: ['ImageElements', 'ViewportDimensions', 'GatherContext', 'devtoolsLogs',
         'traces', 'URL'],
     };
@@ -102,7 +103,7 @@ class OffscreenImages extends ByteEfficiencyAudit {
     return {
       node: ByteEfficiencyAudit.makeNodeItem(image.node),
       url,
-      requestStartTime: networkRecord.startTime,
+      requestStartTime: networkRecord.networkRequestTime,
       totalBytes,
       wastedBytes,
       wastedPercent: 100 * wastedRatio,
@@ -151,23 +152,8 @@ class OffscreenImages extends ByteEfficiencyAudit {
     return images.filter(image => {
       if (image.wastedBytes < IGNORE_THRESHOLD_IN_BYTES) return false;
       if (image.wastedPercent < IGNORE_THRESHOLD_IN_PERCENT) return false;
-      return image.requestStartTime < interactiveTimestamp / 1e6 - IGNORE_THRESHOLD_IN_MS / 1000;
+      return image.requestStartTime < interactiveTimestamp / 1000 - IGNORE_THRESHOLD_IN_MS;
     });
-  }
-
-  /**
-   * The default byte efficiency audit will report max(TTI, load), since lazy-loading offscreen
-   * images won't reduce the overall time and the wasted bytes are really only "wasted" for TTI,
-   * override the function to just look at TTI savings.
-   *
-   * @param {Array<LH.Audit.ByteEfficiencyItem>} results
-   * @param {LH.Gatherer.Simulation.GraphNode} graph
-   * @param {LH.Gatherer.Simulation.Simulator} simulator
-   * @return {number}
-   */
-  static computeWasteWithTTIGraph(results, graph, simulator) {
-    return super.computeWasteWithTTIGraph(results, graph, simulator,
-      {includeLoad: false});
   }
 
   /**

@@ -1,7 +1,7 @@
 /**
- * @license Copyright 2021 The Lighthouse Authors. All Rights Reserved.
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the License. You may obtain a copy of the License at http://www.apache.org/licenses/LICENSE-2.0
- * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific language governing permissions and limitations under the License.
+ * @license
+ * Copyright 2021 Google LLC
+ * SPDX-License-Identifier: Apache-2.0
  */
 
 import log from 'lighthouse-logger';
@@ -12,40 +12,33 @@ import {
 } from './driver/environment.js';
 
 /**
- * @param {LH.Config.FRConfig} config
- * @param {LH.Gatherer.FRTransitionalDriver} driver
+ * @param {LH.Config.ResolvedConfig} resolvedConfig
+ * @param {LH.Gatherer.Driver} driver
  * @param {{gatherMode: LH.Gatherer.GatherMode}} context
  * @return {Promise<LH.BaseArtifacts>}
  */
-async function getBaseArtifacts(config, driver, context) {
+async function getBaseArtifacts(resolvedConfig, driver, context) {
   const BenchmarkIndex = await getBenchmarkIndex(driver.executionContext);
-  const {userAgent} = await getBrowserVersion(driver.defaultSession);
+  const {userAgent, product} = await getBrowserVersion(driver.defaultSession);
 
   return {
     // Meta artifacts.
     fetchTime: new Date().toJSON(),
     Timing: [],
     LighthouseRunWarnings: [],
-    settings: config.settings,
+    settings: resolvedConfig.settings,
     // Environment artifacts that can always be computed.
     BenchmarkIndex,
     HostUserAgent: userAgent,
     HostFormFactor: userAgent.includes('Android') || userAgent.includes('Mobile') ?
       'mobile' : 'desktop',
+    HostProduct: product,
     // Contextual artifacts whose collection changes based on gather mode.
     URL: {
-      initialUrl: '',
-      finalUrl: '',
+      finalDisplayedUrl: '',
     },
     PageLoadError: null,
     GatherContext: context,
-    // Artifacts that have been replaced by regular gatherers in Fraggle Rock.
-    Stacks: [],
-    NetworkUserAgent: '',
-    WebAppManifest: null,
-    InstallabilityErrors: {errors: []},
-    traces: {},
-    devtoolsLogs: {},
   };
 }
 
@@ -67,29 +60,28 @@ function deduplicateWarnings(warnings) {
 }
 
 /**
- * @param {LH.FRBaseArtifacts} baseArtifacts
- * @param {Partial<LH.Artifacts>} gathererArtifacts
+ * @param {LH.BaseArtifacts} baseArtifacts
+ * @param {Partial<LH.GathererArtifacts>} gathererArtifacts
  * @return {LH.Artifacts}
  */
 function finalizeArtifacts(baseArtifacts, gathererArtifacts) {
-  const warnings = baseArtifacts.LighthouseRunWarnings
-    .concat(gathererArtifacts.LighthouseRunWarnings || [])
-    .concat(getEnvironmentWarnings({settings: baseArtifacts.settings, baseArtifacts}));
+  baseArtifacts.LighthouseRunWarnings.push(
+    ...getEnvironmentWarnings({settings: baseArtifacts.settings, baseArtifacts})
+  );
 
   // Cast to remove the partial from gathererArtifacts.
   const artifacts = /** @type {LH.Artifacts} */ ({...baseArtifacts, ...gathererArtifacts});
 
   // Set the post-run meta artifacts.
   artifacts.Timing = log.getTimeEntries();
-  artifacts.LighthouseRunWarnings = deduplicateWarnings(warnings);
+  artifacts.LighthouseRunWarnings = deduplicateWarnings(baseArtifacts.LighthouseRunWarnings);
 
-  if (artifacts.PageLoadError && !artifacts.URL.finalUrl) {
-    artifacts.URL.finalUrl = artifacts.URL.requestedUrl || artifacts.URL.initialUrl;
+  if (artifacts.PageLoadError && !artifacts.URL.finalDisplayedUrl) {
+    artifacts.URL.finalDisplayedUrl = artifacts.URL.requestedUrl || '';
   }
 
   // Check that the runner remembered to mutate the special-case URL artifact.
-  if (!artifacts.URL.initialUrl) throw new Error('Runner did not set initialUrl');
-  if (!artifacts.URL.finalUrl) throw new Error('Runner did not set finalUrl');
+  if (!artifacts.URL.finalDisplayedUrl) throw new Error('Runner did not set finalDisplayedUrl');
 
   return artifacts;
 }

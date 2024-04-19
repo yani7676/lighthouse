@@ -1,20 +1,21 @@
 /**
- * @license Copyright 2017 The Lighthouse Authors. All Rights Reserved.
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the License. You may obtain a copy of the License at http://www.apache.org/licenses/LICENSE-2.0
- * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific language governing permissions and limitations under the License.
+ * @license
+ * Copyright 2017 Google LLC
+ * SPDX-License-Identifier: Apache-2.0
  */
 
 import {ByteEfficiencyAudit} from './byte-efficiency-audit.js';
 import * as i18n from '../../lib/i18n/i18n.js';
 import {computeJSTokenLength as computeTokenLength} from '../../lib/minification-estimator.js';
-import {getRequestForScript, isInline} from '../../lib/script-helpers.js';
+import {estimateCompressedContentSize, getRequestForScript, isInline} from '../../lib/script-helpers.js';
+import {Util} from '../../../shared/util.js';
 
 const UIStrings = {
   /** Imperative title of a Lighthouse audit that tells the user to minify the page’s JS code to reduce file size. This is displayed in a list of audit titles that Lighthouse generates. */
   title: 'Minify JavaScript',
-  /** Description of a Lighthouse audit that tells the user *why* they should minify the page’s JS code to reduce file size. This is displayed after a user expands the section to see more. No character length limits. 'Learn More' becomes link text to additional documentation. */
+  /** Description of a Lighthouse audit that tells the user *why* they should minify the page’s JS code to reduce file size. This is displayed after a user expands the section to see more. No character length limits. The last sentence starting with 'Learn' becomes link text to additional documentation. */
   description: 'Minifying JavaScript files can reduce payload sizes and script parse time. ' +
-    '[Learn how to minify JavaScript](https://web.dev/unminified-javascript/).',
+    '[Learn how to minify JavaScript](https://developer.chrome.com/docs/lighthouse/performance/unminified-javascript/).',
 };
 
 const str_ = i18n.createIcuMessageFn(import.meta.url, UIStrings);
@@ -41,7 +42,8 @@ class UnminifiedJavaScript extends ByteEfficiencyAudit {
       id: 'unminified-javascript',
       title: str_(UIStrings.title),
       description: str_(UIStrings.description),
-      scoreDisplayMode: ByteEfficiencyAudit.SCORING_MODES.NUMERIC,
+      scoreDisplayMode: ByteEfficiencyAudit.SCORING_MODES.METRIC_SAVINGS,
+      guidanceLevel: 3,
       requiredArtifacts: ['Scripts', 'devtoolsLogs', 'traces', 'GatherContext', 'URL'],
     };
   }
@@ -56,8 +58,7 @@ class UnminifiedJavaScript extends ByteEfficiencyAudit {
     const contentLength = scriptContent.length;
     const totalTokenLength = computeTokenLength(scriptContent);
 
-    const totalBytes = ByteEfficiencyAudit.estimateTransferSize(networkRecord, contentLength,
-      'Script');
+    const totalBytes = estimateCompressedContentSize(networkRecord, contentLength, 'Script');
     const wastedRatio = 1 - totalTokenLength / contentLength;
     const wastedBytes = Math.round(totalBytes * wastedRatio);
 
@@ -84,7 +85,7 @@ class UnminifiedJavaScript extends ByteEfficiencyAudit {
       const networkRecord = getRequestForScript(networkRecords, script);
 
       const displayUrl = isInline(script) ?
-        `inline: ${script.content.substring(0, 40)}...` :
+        `inline: ${Util.truncate(script.content, 40)}` :
         script.url;
       try {
         const result = UnminifiedJavaScript.computeWaste(script.content, displayUrl, networkRecord);

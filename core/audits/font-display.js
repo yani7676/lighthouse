@@ -1,7 +1,7 @@
 /**
- * @license Copyright 2017 The Lighthouse Authors. All Rights Reserved.
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the License. You may obtain a copy of the License at http://www.apache.org/licenses/LICENSE-2.0
- * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific language governing permissions and limitations under the License.
+ * @license
+ * Copyright 2017 Google LLC
+ * SPDX-License-Identifier: Apache-2.0
  */
 
 import {Audit} from './audit.js';
@@ -19,11 +19,11 @@ const UIStrings = {
   title: 'All text remains visible during webfont loads',
   /** Title of a diagnostic audit that provides detail on the load of the page's webfonts. Often the text is invisible for seconds before the webfont resource is loaded. This imperative title is shown to users when there is a significant amount of execution time that could be reduced. */
   failureTitle: 'Ensure text remains visible during webfont load',
-  /** Description of a Lighthouse audit that tells the user *why* they should use the font-display CSS feature. This is displayed after a user expands the section to see more. No character length limits. 'Learn More' becomes link text to additional documentation. */
+  /** Description of a Lighthouse audit that tells the user *why* they should use the font-display CSS feature. This is displayed after a user expands the section to see more. No character length limits. The last sentence starting with 'Learn' becomes link text to additional documentation. */
   description:
     'Leverage the `font-display` CSS feature to ensure text is user-visible while ' +
     'webfonts are loading. ' +
-    '[Learn more about `font-display`](https://web.dev/font-display/).',
+    '[Learn more about `font-display`](https://developer.chrome.com/docs/lighthouse/performance/font-display/).',
   /**
    * @description [ICU Syntax] A warning message that is shown when Lighthouse couldn't automatically check some of the page's fonts, telling the user that they will need to manually check the fonts coming from a certain URL origin.
    * @example {https://font.cdn.com/} fontOrigin
@@ -49,7 +49,9 @@ class FontDisplay extends Audit {
       failureTitle: str_(UIStrings.failureTitle),
       description: str_(UIStrings.description),
       supportedModes: ['navigation'],
-      requiredArtifacts: ['devtoolsLogs', 'CSSUsage', 'URL'],
+      guidanceLevel: 3,
+      requiredArtifacts: ['devtoolsLogs', 'Stylesheets', 'URL'],
+      scoreDisplayMode: Audit.SCORING_MODES.METRIC_SAVINGS,
     };
   }
 
@@ -65,7 +67,7 @@ class FontDisplay extends Audit {
     const failingURLs = new Set();
 
     // Go through all the stylesheets to find all @font-face declarations
-    for (const stylesheet of artifacts.CSSUsage.stylesheets) {
+    for (const stylesheet of artifacts.Stylesheets) {
       // Eliminate newlines so we can more easily scan through with a regex
       const newlinesStripped = stylesheet.content.replace(/(\r|\n)+/g, ' ');
       // Find the @font-faces
@@ -100,7 +102,7 @@ class FontDisplay extends Audit {
         for (const relativeURL of relativeURLs) {
           try {
             const relativeRoot = UrlUtils.isValid(stylesheet.header.sourceURL) ?
-              stylesheet.header.sourceURL : artifacts.URL.finalUrl;
+              stylesheet.header.sourceURL : artifacts.URL.finalDisplayedUrl;
             const absoluteURL = new URL(relativeURL, relativeRoot);
             targetURLSet.add(absoluteURL.href);
           } catch (err) {
@@ -165,7 +167,7 @@ class FontDisplay extends Audit {
       .map(record => {
         // In reality the end time should be calculated with paint time included
         // all browsers wait 3000ms to block text so we make sure 3000 is our max wasted time
-        const wastedMs = Math.min((record.endTime - record.startTime) * 1000, 3000);
+        const wastedMs = Math.min(record.networkEndTime - record.networkRequestTime, 3000);
 
         return {
           url: record.url,
@@ -175,8 +177,8 @@ class FontDisplay extends Audit {
 
     /** @type {LH.Audit.Details.Table['headings']} */
     const headings = [
-      {key: 'url', itemType: 'url', text: str_(i18n.UIStrings.columnURL)},
-      {key: 'wastedMs', itemType: 'ms', text: str_(i18n.UIStrings.columnWastedMs)},
+      {key: 'url', valueType: 'url', label: str_(i18n.UIStrings.columnURL)},
+      {key: 'wastedMs', valueType: 'ms', label: str_(i18n.UIStrings.columnWastedMs)},
     ];
 
     const details = Audit.makeTableDetails(headings, results);

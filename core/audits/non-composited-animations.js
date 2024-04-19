@@ -1,7 +1,7 @@
 /**
- * @license Copyright 2020 The Lighthouse Authors. All Rights Reserved.
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the License. You may obtain a copy of the License at http://www.apache.org/licenses/LICENSE-2.0
- * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific language governing permissions and limitations under the License.
+ * @license
+ * Copyright 2020 Google LLC
+ * SPDX-License-Identifier: Apache-2.0
  */
 
 /**
@@ -18,7 +18,7 @@ const UIStrings = {
   title: 'Avoid non-composited animations',
   /** Description of a diagnostic LH audit that shows the user animations that are not composited. Janky means frames may be skipped and the animation will look bad. Acceptable alternatives here might be 'poor', or 'slow'. */
   description: 'Animations which are not composited can be janky and increase CLS. ' +
-    '[Learn how to avoid non-composited animations](https://web.dev/non-composited-animations)',
+    '[Learn how to avoid non-composited animations](https://developer.chrome.com/docs/lighthouse/performance/non-composited-animations/)',
   /** [ICU Syntax] Label identifying the number of animated elements that are not composited. */
   displayValue: `{itemCount, plural,
   =1 {# animated element found}
@@ -110,6 +110,7 @@ class NonCompositedAnimations extends Audit {
       scoreDisplayMode: Audit.SCORING_MODES.INFORMATIVE,
       title: str_(UIStrings.title),
       description: str_(UIStrings.description),
+      guidanceLevel: 2,
       requiredArtifacts: ['TraceElements', 'HostUserAgent'],
     };
   }
@@ -125,6 +126,7 @@ class NonCompositedAnimations extends Audit {
       return {
         score: 1,
         notApplicable: true,
+        metricSavings: {CLS: 0},
       };
     }
 
@@ -173,14 +175,14 @@ class NonCompositedAnimations extends Audit {
     /** @type {LH.Audit.Details.Table['headings']} */
     const headings = [
       /* eslint-disable max-len */
-      {key: 'node', itemType: 'node', subItemsHeading: {key: 'failureReason', itemType: 'text'}, text: str_(i18n.UIStrings.columnElement)},
+      {key: 'node', valueType: 'node', subItemsHeading: {key: 'failureReason', valueType: 'text'}, label: str_(i18n.UIStrings.columnElement)},
       /* eslint-enable max-len */
     ];
 
     if (shouldAddAnimationNameColumn) {
       headings.push(
         /* eslint-disable max-len */
-        {key: null, itemType: 'text', subItemsHeading: {key: 'animation', itemType: 'text'}, text: str_(i18n.UIStrings.columnName)}
+        {key: null, valueType: 'text', subItemsHeading: {key: 'animation', valueType: 'text'}, label: str_(i18n.UIStrings.columnName)}
         /* eslint-enable max-len */
       );
     }
@@ -195,6 +197,12 @@ class NonCompositedAnimations extends Audit {
     return {
       score: results.length === 0 ? 1 : 0,
       notApplicable: results.length === 0,
+      metricSavings: {
+        // We do not have enough information to accurately predict the impact of individual animations on CLS.
+        // It is also not worth the effort since only a small percentage of sites have their CLS affected by non-composited animations.
+        // https://github.com/GoogleChrome/lighthouse/pull/15099#issuecomment-1558107906
+        CLS: 0,
+      },
       details,
       displayValue,
     };

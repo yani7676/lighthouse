@@ -1,7 +1,7 @@
 /**
- * @license Copyright 2019 The Lighthouse Authors. All Rights Reserved.
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the License. You may obtain a copy of the License at http://www.apache.org/licenses/LICENSE-2.0
- * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific language governing permissions and limitations under the License.
+ * @license
+ * Copyright 2019 Google LLC
+ * SPDX-License-Identifier: Apache-2.0
  */
 
 /**
@@ -17,18 +17,17 @@ import {Worker, isMainThread, parentPort, workerData} from 'worker_threads';
 import {once} from 'events';
 
 import puppeteer from 'puppeteer-core';
-import ChromeLauncher from 'chrome-launcher';
+import * as ChromeLauncher from 'chrome-launcher';
 
-import {CriConnection} from '../../../../core/legacy/gather/connections/cri.js';
-import {LH_ROOT} from '../../../../root.js';
+import {LH_ROOT} from '../../../../shared/root.js';
 import {loadArtifacts, saveArtifacts} from '../../../../core/lib/asset-saver.js';
 
 // This runs only in the worker. The rest runs on the main thread.
 if (!isMainThread && parentPort) {
   (async () => {
-    const {url, configJson, testRunnerOptions} = workerData;
+    const {url, config, testRunnerOptions} = workerData;
     try {
-      const result = await runBundledLighthouse(url, configJson, testRunnerOptions);
+      const result = await runBundledLighthouse(url, config, testRunnerOptions);
       // Save to assets directory because LighthouseError won't survive postMessage.
       const assetsDir = fs.mkdtempSync(os.tmpdir() + '/smoke-bundle-assets-');
       await saveArtifacts(result.artifacts, assetsDir);
@@ -39,61 +38,57 @@ if (!isMainThread && parentPort) {
       parentPort?.postMessage({type: 'result', value});
     } catch (err) {
       console.error(err);
-      parentPort?.postMessage({type: 'error', value: err});
+      parentPort?.postMessage({type: 'error', value: err.toString()});
     }
   })();
 }
 
 /**
  * @param {string} url
- * @param {LH.Config.Json|undefined} configJson
- * @param {{isDebug?: boolean, useLegacyNavigation?: boolean}} testRunnerOptions
+ * @param {LH.Config|undefined} config
+ * @param {Smokehouse.SmokehouseOptions['testRunnerOptions']} testRunnerOptions
  * @return {Promise<{lhr: LH.Result, artifacts: LH.Artifacts}>}
  */
-async function runBundledLighthouse(url, configJson, testRunnerOptions) {
+async function runBundledLighthouse(url, config, testRunnerOptions) {
   if (isMainThread || !parentPort) {
     throw new Error('must be called in worker');
   }
 
   const originalBuffer = global.Buffer;
   const originalRequire = global.require;
+  const originalProcess = global.process;
   if (typeof globalThis === 'undefined') {
     // @ts-expect-error - exposing for loading of dt-bundle.
     global.globalThis = global;
   }
 
   // Load bundle, which creates a `global.runBundledLighthouse`.
-  eval(fs.readFileSync(LH_ROOT + '/dist/lighthouse-dt-bundle.js', 'utf-8'));
+  await import(LH_ROOT + '/dist/lighthouse-dt-bundle.js');
 
   global.require = originalRequire;
   global.Buffer = originalBuffer;
+  global.process = originalProcess;
 
   /** @type {import('../../../../core/index.js')['default']} */
   // @ts-expect-error - not worth giving test global an actual type.
   const lighthouse = global.runBundledLighthouse;
 
-  /** @type {import('../../../../core/index.js')['legacyNavigation']} */
-  // @ts-expect-error - not worth giving test global an actual type.
-  const legacyNavigation = global.runBundledLighthouseLegacyNavigation;
-
   // Launch and connect to Chrome.
-  const launchedChrome = await ChromeLauncher.launch();
+  const launchedChrome = await ChromeLauncher.launch({
+    chromeFlags: [
+      testRunnerOptions?.headless ? '--headless=new' : '',
+    ],
+  });
   const port = launchedChrome.port;
 
   // Run Lighthouse.
   try {
-    const logLevel = testRunnerOptions.isDebug ? 'info' : undefined;
-    let runnerResult;
-    if (testRunnerOptions.useLegacyNavigation) {
-      const connection = new CriConnection(port);
-      runnerResult =
-        await legacyNavigation(url, {port, logLevel}, configJson, connection);
-    } else {
-      // Puppeteer is not included in the bundle, we must create the page here.
-      const browser = await puppeteer.connect({browserURL: `http://localhost:${port}`});
-      const page = await browser.newPage();
-      runnerResult = await lighthouse(url, {port, logLevel}, configJson, page);
-    }
+    const logLevel = testRunnerOptions?.isDebug ? 'verbose' : 'info';
+
+    // Puppeteer is not included in the bundle, we must create the page here.
+    const browser = await puppeteer.connect({browserURL: `http://127.0.0.1:${port}`});
+    const page = await browser.newPage();
+    const runnerResult = await lighthouse(url, {port, logLevel}, config, page);
     if (!runnerResult) throw new Error('No runnerResult');
 
     return {
@@ -109,33 +104,31 @@ async function runBundledLighthouse(url, configJson, testRunnerOptions) {
 /**
  * Launch Chrome and do a full Lighthouse run via the Lighthouse DevTools bundle.
  * @param {string} url
- * @param {LH.Config.Json=} configJson
- * @param {{isDebug?: boolean, useLegacyNavigation?: boolean}=} testRunnerOptions
+ * @param {LH.Config=} config
+ * @param {Smokehouse.SmokehouseOptions['testRunnerOptions']=} testRunnerOptions
  * @return {Promise<{lhr: LH.Result, artifacts: LH.Artifacts, log: string}>}
  */
-async function runLighthouse(url, configJson, testRunnerOptions = {}) {
+async function runLighthouse(url, config, testRunnerOptions = {}) {
   /** @type {string[]} */
   const logs = [];
   const worker = new Worker(new URL(import.meta.url), {
     stdout: true,
     stderr: true,
-    workerData: {url, configJson, testRunnerOptions},
+    workerData: {url, config, testRunnerOptions},
   });
   worker.stdout.setEncoding('utf8');
   worker.stderr.setEncoding('utf8');
   worker.stdout.addListener('data', (data) => {
-    process.stdout.write(data);
-    logs.push(`STDOUT: ${data}`);
+    logs.push(`[STDOUT] ${data}`);
   });
   worker.stderr.addListener('data', (data) => {
-    process.stderr.write(data);
-    logs.push(`STDERR: ${data}`);
+    logs.push(`[STDERR] ${data}`);
   });
   const [workerResponse] = await once(worker, 'message');
   const log = logs.join('') + '\n';
 
   if (workerResponse.type === 'error') {
-    new Error(`Worker returned an error: ${workerResponse.value}\nLog:\n${log}`);
+    throw new Error(`Worker returned an error: ${workerResponse.value}\nLog:\n${log}`);
   }
 
   const result = workerResponse.value;

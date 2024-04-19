@@ -1,67 +1,73 @@
 /**
- * @license Copyright 2018 The Lighthouse Authors. All Rights Reserved.
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the License. You may obtain a copy of the License at http://www.apache.org/licenses/LICENSE-2.0
- * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific language governing permissions and limitations under the License.
+ * @license
+ * Copyright 2018 Google LLC
+ * SPDX-License-Identifier: Apache-2.0
  */
 
-import {strict as assert} from 'assert';
+import assert from 'assert/strict';
 
 import RenderBlockingResourcesAudit from '../../../audits/byte-efficiency/render-blocking-resources.js'; // eslint-disable-line max-len
 import * as constants from '../../../config/constants.js';
-import {NetworkNode} from '../../../lib/dependency-graph/network-node.js';
-import {CPUNode} from '../../../lib/dependency-graph/cpu-node.js';
-import {Simulator} from '../../../lib/dependency-graph/simulator/simulator.js';
+import {NetworkNode} from '../../../lib/lantern/network-node.js';
+import {CPUNode} from '../../../lib/lantern/cpu-node.js';
+import {Simulator} from '../../../lib/lantern/simulator/simulator.js';
 import {NetworkRequest} from '../../../lib/network-request.js';
 import {getURLArtifactFromDevtoolsLog, readJson} from '../../test-utils.js';
 
-const trace = readJson('../../fixtures/traces/progressive-app-m60.json', import.meta);
-const devtoolsLog = readJson('../../fixtures/traces/progressive-app-m60.devtools.log.json', import.meta);
-const ampTrace = readJson('../../fixtures/traces/amp-m86.trace.json', import.meta);
-const ampDevtoolsLog = readJson('../../fixtures/traces/amp-m86.devtoolslog.json', import.meta);
+const trace = readJson('../../fixtures/artifacts/render-blocking/trace.json', import.meta);
+const devtoolsLog = readJson('../../fixtures/artifacts/render-blocking/devtoolslog.json', import.meta);
 
 const mobileSlow4G = constants.throttling.mobileSlow4G;
 
 describe('Render blocking resources audit', () => {
-  it('evaluates http2 input correctly', async () => {
+  it('evaluates render blocking input correctly', async () => {
     const artifacts = {
       URL: getURLArtifactFromDevtoolsLog(devtoolsLog),
       GatherContext: {gatherMode: 'navigation'},
       traces: {defaultPass: trace},
       devtoolsLogs: {defaultPass: devtoolsLog},
-      TagsBlockingFirstPaint: [
-        {
-          tag: {url: 'https://pwa.rocks/script.js'},
-          transferSize: 621,
-        },
-      ],
+      Stacks: [],
     };
 
     const settings = {throttlingMethod: 'simulate', throttling: mobileSlow4G};
     const computedCache = new Map();
     const result = await RenderBlockingResourcesAudit.audit(artifacts, {settings, computedCache});
-    assert.equal(result.score, 1);
-    assert.equal(result.numericValue, 0);
+    assert.equal(result.score, 0);
+    assert.equal(result.numericValue, 304);
+    assert.deepStrictEqual(result.metricSavings, {FCP: 304, LCP: 0});
+  });
+
+  it('evaluates correct wastedMs when LCP is text', async () => {
+    const textLcpTrace = JSON.parse(JSON.stringify(trace));
+
+    // Make it look like the LCP was text in the trace
+    textLcpTrace.traceEvents =
+      textLcpTrace.traceEvents.filter(e => e.name !== 'LargestImagePaint::Candidate');
+    const lcpEvent =
+      textLcpTrace.traceEvents.find(e => e.name === 'largestContentfulPaint::Candidate');
+    lcpEvent.args.data.type = 'text';
+    delete lcpEvent.args.data.url;
+
+    const artifacts = {
+      URL: getURLArtifactFromDevtoolsLog(devtoolsLog),
+      GatherContext: {gatherMode: 'navigation'},
+      traces: {defaultPass: textLcpTrace},
+      devtoolsLogs: {defaultPass: devtoolsLog},
+      Stacks: [],
+    };
+
+    const settings = {throttlingMethod: 'simulate', throttling: mobileSlow4G};
+    const computedCache = new Map();
+    const result = await RenderBlockingResourcesAudit.audit(artifacts, {settings, computedCache});
+    assert.deepStrictEqual(result.metricSavings, {FCP: 304, LCP: 304});
   });
 
   it('evaluates amp page correctly', async () => {
     const artifacts = {
-      URL: getURLArtifactFromDevtoolsLog(ampDevtoolsLog),
+      URL: getURLArtifactFromDevtoolsLog(devtoolsLog),
       GatherContext: {gatherMode: 'navigation'},
-      traces: {defaultPass: ampTrace},
-      devtoolsLogs: {defaultPass: ampDevtoolsLog},
-      TagsBlockingFirstPaint: [
-        {
-          tag: {
-            url:
-              'https://fonts.googleapis.com/css?family=Fira+Sans+Condensed%3A400%2C400i%2C600%2C600i&subset=latin%2Clatin-ext&display=swap',
-          },
-          transferSize: 621,
-        },
-        {
-          tag: {url: 'https://fonts.googleapis.com/css?family=Montserrat'},
-          transferSize: 621,
-        },
-      ],
+      traces: {defaultPass: trace},
+      devtoolsLogs: {defaultPass: devtoolsLog},
       Stacks: [
         {
           detector: 'js',
@@ -76,17 +82,21 @@ describe('Render blocking resources audit', () => {
     const settings = {throttlingMethod: 'simulate', throttling: mobileSlow4G};
     const computedCache = new Map();
     const result = await RenderBlockingResourcesAudit.audit(artifacts, {settings, computedCache});
-    expect(result.numericValue).toMatchInlineSnapshot(`450`);
-    expect(result.details.items).toMatchObject([
+    expect(result.numericValue).toEqual(0);
+    expect(result.details.items).toEqual([
       {
-        'totalBytes': 621,
-        'url': 'https://fonts.googleapis.com/css?family=Fira+Sans+Condensed%3A400%2C400i%2C600%2C600i&subset=latin%2Clatin-ext&display=swap',
-        'wastedMs': 440,
+        totalBytes: 389629,
+        url: 'http://localhost:57822/style.css',
+        // This value would be higher if we didn't have a special case for AMP stylesheets
+        wastedMs: 1489,
       },
-      // Due to internal H2 simulation details, parallel HTTP/2 requests are pipelined which makes
-      // it look like Montserrat starts after Fira Sans finishes. It would be preferred
-      // if eventual simulation improvements list Montserrat here as well.
+      {
+        totalBytes: 291,
+        url: 'http://localhost:57822/script.js',
+        wastedMs: 311,
+      },
     ]);
+    expect(result.metricSavings).toEqual({FCP: 0, LCP: 0});
   });
 
   describe('#estimateSavingsWithGraphs', () => {
@@ -102,11 +112,13 @@ describe('Render blocking resources audit', () => {
       const protocol = 'http';
       record = props => {
         const parsedURL = {host: 'example.com', scheme, securityOrigin: 'http://example.com'};
-        return Object.assign({parsedURL, requestId: requestId++}, props, {protocol});
+        const record = Object.assign({parsedURL, requestId: requestId++}, props, {protocol});
+        return NetworkRequest.asLanternNetworkRequest(record);
       };
       recordSlow = props => {
         const parsedURL = {host: 'slow.com', scheme, securityOrigin: 'http://slow.com'};
-        return Object.assign({parsedURL, requestId: requestId++}, props, {protocol});
+        const record = Object.assign({parsedURL, requestId: requestId++}, props, {protocol});
+        return NetworkRequest.asLanternNetworkRequest(record);
       };
     });
 
@@ -143,8 +155,8 @@ describe('Render blocking resources audit', () => {
       documentNode.addDependent(styleNode);
 
       const result = estimate(simulator, documentNode, deferredIds, wastedBytesMap, Stacks);
-      // Saving 1000 + 1000 + 100ms for TCP handshake + 1 RT savings + server response time
-      assert.equal(result, 2100);
+      // Saving 1000 + 100ms for 1 RT savings + server response time
+      assert.equal(result, 1100);
     });
 
     it('does not report savings from AMP-stack when document already exceeds 2.1s', () => {

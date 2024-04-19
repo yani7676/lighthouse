@@ -1,15 +1,15 @@
 /**
- * @license Copyright 2017 The Lighthouse Authors. All Rights Reserved.
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the License. You may obtain a copy of the License at http://www.apache.org/licenses/LICENSE-2.0
- * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific language governing permissions and limitations under the License.
+ * @license
+ * Copyright 2017 Google LLC
+ * SPDX-License-Identifier: Apache-2.0
  */
 
 import fs from 'fs';
 import path from 'path';
-import {strict as assert} from 'assert';
+import assert from 'assert/strict';
 
 import ScreenshotThumbnailsAudit from '../../audits/screenshot-thumbnails.js';
-import {LH_ROOT} from '../../../root.js';
+import {LH_ROOT} from '../../../shared/root.js';
 import {readJson} from '../test-utils.js';
 
 const pwaTrace = readJson('../fixtures/traces/progressive-app-m60.json', import.meta);
@@ -19,7 +19,7 @@ const noScreenshotsTrace = {traceEvents: pwaTrace.traceEvents.filter(e => e.name
 
 describe('Screenshot thumbnails', () => {
   it('should extract thumbnails from a trace', () => {
-    const options = {minimumTimelineDuration: 500};
+    const options = {minimumTimelineDuration: 500, numberOfThumbnails: 10, thumbnailWidth: 120};
     const settings = {throttlingMethod: 'provided'};
     const artifacts = {
       GatherContext: {gatherMode: 'timespan'},
@@ -83,8 +83,8 @@ describe('Screenshot thumbnails', () => {
 
     const context = {settings, options, computedCache: new Map()};
     return ScreenshotThumbnailsAudit.audit(artifacts, context).then(results => {
-      assert.equal(results.details.items[0].timing, 82);
-      assert.equal(results.details.items[9].timing, 818);
+      assert.equal(results.details.items[0].timing, 102);
+      assert.equal(results.details.items[7].timing, 818);
     });
   });
 
@@ -97,8 +97,8 @@ describe('Screenshot thumbnails', () => {
 
     const context = {settings, options: {}, computedCache: new Map()};
     return ScreenshotThumbnailsAudit.audit(artifacts, context).then(results => {
-      assert.equal(results.details.items[0].timing, 300);
-      assert.equal(results.details.items[9].timing, 3000);
+      assert.equal(results.details.items[0].timing, 375);
+      assert.equal(results.details.items[7].timing, 3000);
     });
   });
 

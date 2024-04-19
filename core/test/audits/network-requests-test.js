@@ -1,7 +1,7 @@
 /**
- * @license Copyright 2018 The Lighthouse Authors. All Rights Reserved.
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the License. You may obtain a copy of the License at http://www.apache.org/licenses/LICENSE-2.0
- * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific language governing permissions and limitations under the License.
+ * @license
+ * Copyright 2018 Google LLC
+ * SPDX-License-Identifier: Apache-2.0
  */
 
 import NetworkRequests from '../../audits/network-requests.js';
@@ -27,8 +27,9 @@ describe('Network requests audit', () => {
     const output = await NetworkRequests.audit(artifacts, {computedCache: new Map()});
 
     expect(output.details.items[0]).toMatchObject({
-      startTime: 0,
-      endTime: expect.toBeApproximately(701, 0),
+      rendererStartTime: 0,
+      networkRequestTime: expect.toBeApproximately(1, 0),
+      networkEndTime: expect.toBeApproximately(702, 0),
       finished: true,
       transferSize: 11358,
       resourceSize: 39471,
@@ -38,8 +39,9 @@ describe('Network requests audit', () => {
       priority: 'VeryHigh',
     });
     expect(output.details.items[2]).toMatchObject({
-      startTime: expect.toBeApproximately(711, 0),
-      endTime: expect.toBeApproximately(1289, 0),
+      rendererStartTime: expect.toBeApproximately(710, 0),
+      networkRequestTime: expect.toBeApproximately(712, 0),
+      networkEndTime: expect.toBeApproximately(1289, 0),
       finished: false,
       transferSize: 26441,
       resourceSize: 0,
@@ -49,8 +51,9 @@ describe('Network requests audit', () => {
       priority: 'Low',
     });
     expect(output.details.items[5]).toMatchObject({
-      startTime: expect.toBeApproximately(717, 0),
-      endTime: expect.toBeApproximately(1296, 0),
+      rendererStartTime: expect.toBeApproximately(713, 0),
+      networkRequestTime: expect.toBeApproximately(717, 0),
+      networkEndTime: expect.toBeApproximately(1297, 0),
       finished: false,
       transferSize: 58571,
       resourceSize: 0,
@@ -62,14 +65,14 @@ describe('Network requests audit', () => {
 
     expect(output.details.debugData).toStrictEqual({
       type: 'debugdata',
-      networkStartTimeTs: 360725781425,
+      networkStartTimeTs: 360725780729,
     });
   });
 
   it('should handle times correctly', async () => {
     const records = [
-      {url: 'https://example.com/0', startTime: 15.0, endTime: 15.5},
-      {url: 'https://example.com/1', startTime: 15.5, endTime: -1},
+      {url: 'https://example.com/0', rendererStartTime: 14, networkRequestTime: 15.0, networkEndTime: 15.5},
+      {url: 'https://example.com/1', rendererStartTime: 14, networkRequestTime: 15.5, networkEndTime: -1},
     ];
 
     const artifacts = {
@@ -82,12 +85,14 @@ describe('Network requests audit', () => {
     const output = await NetworkRequests.audit(artifacts, {computedCache: new Map()});
 
     expect(output.details.items).toMatchObject([{
-      startTime: 0,
-      endTime: 500,
+      rendererStartTime: 0,
+      networkRequestTime: 1,
+      networkEndTime: 1.5,
       finished: true,
     }, {
-      startTime: 500,
-      endTime: undefined,
+      rendererStartTime: 0,
+      networkRequestTime: 1.5,
+      networkEndTime: undefined,
       finished: true,
     }]);
   });
@@ -161,6 +166,30 @@ describe('Network requests audit', () => {
     }, {
       url: 'https://example.com/img.jpg',
       isLinkPreload: true,
+    }]);
+  });
+
+  it('should include if network request was first or third party', async () => {
+    const records = [
+      {url: 'https://example.com/'},
+      {url: 'https://www.googletagmanager.com/gtm.js'},
+    ];
+
+    const artifacts = {
+      devtoolsLogs: {
+        [NetworkRequests.DEFAULT_PASS]: networkRecordsToDevtoolsLog(records),
+      },
+      URL: {mainDocumentUrl: 'https://example.com/'},
+      GatherContext,
+    };
+    const output = await NetworkRequests.audit(artifacts, {computedCache: new Map()});
+
+    expect(output.details.items).toMatchObject([{
+      url: 'https://example.com/',
+      entity: 'example.com',
+    }, {
+      url: 'https://www.googletagmanager.com/gtm.js',
+      entity: 'Google Tag Manager',
     }]);
   });
 });

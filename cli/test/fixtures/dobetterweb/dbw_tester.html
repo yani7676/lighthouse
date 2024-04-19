@@ -1,15 +1,15 @@
 <!doctype html>
 <!--
- * Copyright 2016 The Lighthouse Authors. All Rights Reserved.
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the License. You may obtain a copy of the License at http://www.apache.org/licenses/LICENSE-2.0
- * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific language governing permissions and limitations under the License.
+ * @license
+ * Copyright 2016 Google LLC
+ * SPDX-License-Identifier: Apache-2.0
 -->
 
 <html>
 <head>
 <title>DoBetterWeb Mega Tester... Of Death</title>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1">
+<meta name="viewport" content="width=2899">
 <meta property="og:description" content="Open Graph smoke test description">
 
 <template id="links-blocking-first-paint-tmpl">
@@ -42,8 +42,17 @@
 <!-- PASS: async stylesheet -->
 <link rel="stylesheet" href="./dbw_tester.css?delay=3000&async=true" disabled onload="this.disabled = false">
 
-<!-- Alternate stylesheets should not show in TagsBlockingFirstPaint artifact -->
+<!-- Alternate stylesheets should not be considered render blocking -->
 <link rel="alternate stylesheet" href="./empty.css">
+
+<!-- Malformed links should not be considered render blocking -->
+<link rel="stylesheet" href="">
+
+<script>
+  // Set a mobile-friendly viewport only on load.
+  const metaViewport = document.querySelector('meta[name="viewport"]');
+  metaViewport.content = 'width=device-width, initial-scale=1, minimum-scale=1';
+</script>
 
 <!-- FAIL: block rendering -->
 <script src="./dbw_tester.js" id="dbw-tester-script"></script>
@@ -104,6 +113,16 @@
 <!-- Force FCP to be ~5s out, necessary to make sure our render-blocking audits still work -->
 <!-- even when other forces were responsible for delaying the render. -->
 <script src="./fcp-delayer.js?delay=5000"></script>
+
+<script>
+  const promise = new Promise(resolve => {
+    setTimeout(resolve, 50);
+  }).then(() => {
+    const image = new Image(50, 50);
+    image.src = './lighthouse-480x318.jpg?async';
+  });
+</script>
+
 </head>
 <body>
 
@@ -119,7 +138,7 @@
 
 <!-- Various sites like to assign HTMLElements a custom `matches` property. See issue #5934 -->
 
-<!-- EmbeddedContent will process these elements -->
+<!-- Was for deprecated plugins audit, keeping them so smoke expectations don't change (e.g. dom-size) -->
 <object id="5934a"></object>
 <object id="5934b"></object>
 
@@ -148,14 +167,16 @@
   // Ensure long-task collection still works when performance.now is redefined
   window.performance.now = 'right now';
 
-  // Ensure bounding rectangles still work when getBoundingClientRect is overriden.
+  // Ensure bounding rectangles still work when getBoundingClientRect is overridden.
   window.HTMLElement.prototype.getBoundingClientRect = function() {
     return {top: '', left: ''};
   };
 </script>
 
 <div>
-  <h2>Do better web tester page</h2>
+  <!-- Empty url('') will attempt to load the page itself as a background image. -->
+  <!-- A pseudo-element LCP image is added in dbw_tester.css. -->
+  <h2 id="toppy" style="background-image:url('');">Do better web tester page</h2>
   <span>Hi there!</span>
 
   <!-- Invalid SVG with a link just to ensure the `LinkElements` gatherer can handle it. -->
@@ -194,7 +215,7 @@
   <a href="mailto:inbox@email.com" target="_blank"></a>
 </template>
 
-<template id="password-inputs-can-be-pasted-into">
+<template id="paste-preventing-inputs">
   <!-- FAIL - calls preventDefault on event -->
   <input type="password" onpaste="event.preventDefault();" />
   <!-- PASS -->
@@ -204,33 +225,22 @@
 
 </template>
 
-<!-- FAIL(image-aspect-ratio): image is naturally 480x318 -->
-<img src="lighthouse-480x318.jpg?iar1" width="120" height="15">
+<!-- FAIL(image-aspect-ratio): image is naturally 1024x680 -->
+<img src="lighthouse-1024x680.jpg?iar1" width="120" height="15">
 <!-- PASS(image-aspect-ratio) -->
-<!-- FAIL(lcp-lazy-loaded) -->
-<img loading="lazy" src="lighthouse-480x318.jpg?iar2" width="120" height="80">
+<img loading="lazy" src="lighthouse-1024x680.jpg?iar2" width="120" height="80" fetchpriority="low">
 
 <!-- FAIL(image-size-responsive): image is naturally 480x318 -->
-<img src="lighthouse-480x318.jpg?isr1" width="360" height="240" style="position: absolute;">
+<img src="lighthouse-480x318.jpg?isr1" width="400" height="360" style="position: absolute;">
 <!-- PASS(image-size-responsive) -->
-<img src="lighthouse-480x318.jpg?isr2" width="120" height="80" style="position: absolute;">
+<img src="lighthouse-1024x680.jpg?isr2" width="120" height="80" style="position: absolute;">
 <!-- PASS(image-size-responsive) -->
-<img src="lighthouse-480x318.jpg?isr3" width="360" height="240" style="image-rendering: pixelated; position: absolute;">
+<img src="lighthouse-1024x680.jpg?isr3" width="360" height="240" style="image-rendering: pixelated; position: absolute;">
 <!-- PASS(image-size-responsive) -->
-<img src="lighthouse-480x318.jpg?isr4" srcset="lighthouse-480x318.jpg 2x" width="360" height="240" style="position: absolute;">
+<img src="lighthouse-1024x680.jpg?isr4" srcset="lighthouse-1024x680.jpg 2x" width="360" height="240" style="position: absolute;">
 
 <!-- FAIL(efficient-animated-content): animated gif found -->
 <img src="lighthouse-rotating.gif" width="811" height="462">
-
-<!-- FAIL(tap-targets): buttons too close together -->
-<style>
-.small-button {
-  display: block;
-  width: 200px;
-}
-</style>
-<button class="small-button">Do something</button>
-<button class="small-button">Do something else</button>
 
 <!-- Some websites overwrite the original Error object. The captureJSCallUsage function
   relies on the native Error object and prepareStackTrace from V8. When overwriting the stack
@@ -361,8 +371,8 @@ function noRelOpenLinksTest() {
   stampTemplate('noopener-links-tmpl', document.body);
 }
 
-function passwordInputsCanBePastedIntoTest() {
-  stampTemplate('password-inputs-can-be-pasted-into', document.body);
+function inputsCanBePastedIntoTest() {
+  stampTemplate('paste-preventing-inputs', document.body);
 }
 
 
@@ -392,6 +402,24 @@ function noUnloadListenersTest() {
   });
 }
 
+function thirdPartyCookieTest() {
+  const cookieInlineParam = headersParam([[
+    'Set-Cookie',
+    'Foo=Bar;SameSite=None;Secure;',
+  ]]);
+  const script = document.createElement('script');
+  // Use [::1] instead of localhost so this shows up as third party
+  script.src = 'http://[::1]:10503/dobetterweb/empty_module.js?' + cookieInlineParam;
+  requestAnimationFrame(() => {
+    document.body.append(script);
+  });
+}
+
+function headersParam(headers) {
+  const headerString = new URLSearchParams(headers).toString();
+  return new URLSearchParams([['extra_header', headerString]]).toString();
+}
+
 // Figure out which tests to fun.
 const params = new URLSearchParams(location.search);
 if (location.search === '') {
@@ -405,9 +433,10 @@ if (location.search === '') {
   noRelOpenLinksTest();
   // oldCSSFlexboxTest();
   deprecationsTest();
-  passwordInputsCanBePastedIntoTest();
+  inputsCanBePastedIntoTest();
   isOnHttps();
   noUnloadListenersTest();
+  thirdPartyCookieTest();
 } else {
   if (params.has('documentWrite')) {
     documentWriteTest();
@@ -440,10 +469,13 @@ if (location.search === '') {
     deprecationsTest();
   }
   if (params.has('passwordinputs')) {
-    passwordInputsCanBePastedIntoTest();
+    inputsCanBePastedIntoTest();
   }
   if (params.has('isonhttps')) {
     isOnHttps();
+  }
+  if (params.has('3pcookie')) {
+    thirdPartyCookieTest();
   }
 }
 </script>
@@ -456,8 +488,10 @@ if (location.search === '') {
 <!-- Including this validates that pages that override fetch don't crash our entire stacks gatherer. -->
 <script>window.fetch = () => new Promise(r => setTimeout(r, 90000));</script>
 
-<!-- FAIL(is-on-https): requires a non-localhost http file -->
-<script src="http://ajax.googleapis.com/ajax/libs/jquery/2.1.1/jquery.min.js"></script>
+<!-- Include a fake jquery, to test js-libraries -->
+<script>
+  window.$ = {fn: {jquery: '2.1.1'}};
+</script>
 
 <!-- Filesystem URL shouldn't be flagged is-on-https. -->
 <script>

@@ -1,10 +1,10 @@
 /**
- * @license Copyright 2017 The Lighthouse Authors. All Rights Reserved.
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the License. You may obtain a copy of the License at http://www.apache.org/licenses/LICENSE-2.0
- * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific language governing permissions and limitations under the License.
+ * @license
+ * Copyright 2017 Google LLC
+ * SPDX-License-Identifier: Apache-2.0
  */
 
-import {strict as assert} from 'assert';
+import assert from 'assert/strict';
 
 import UnminifiedCssAudit from '../../../audits/byte-efficiency/unminified-css.js';
 
@@ -15,8 +15,8 @@ describe('Page uses optimized css', () => {
   it('fails when given unminified stylesheets', () => {
     const auditResult = UnminifiedCssAudit.audit_(
       {
-        URL: {finalUrl: ''},
-        CSSUsage: {stylesheets: [
+        URL: {finalDisplayedUrl: ''},
+        Stylesheets: [
           {
             header: {sourceURL: 'foo.css'},
             content: `
@@ -41,7 +41,7 @@ describe('Page uses optimized css', () => {
               }
             `.replace(/\n\s+/g, '\n'),
           },
-        ]},
+        ],
       },
       [
         {url: 'foo.css', transferSize: 20 * KB, resourceType},
@@ -61,8 +61,8 @@ describe('Page uses optimized css', () => {
   it('passes when stylesheets are already minified', () => {
     const auditResult = UnminifiedCssAudit.audit_(
       {
-        URL: {finalUrl: ''},
-        CSSUsage: {stylesheets: [
+        URL: {finalDisplayedUrl: ''},
+        Stylesheets: [
           {header: {sourceURL: 'foo.css'}, content: '#id{width:100px;}'},
           {
             header: {sourceURL: 'other.css'},
@@ -77,7 +77,7 @@ describe('Page uses optimized css', () => {
             header: {sourceURL: 'invalid.css'},
             content: '/* a broken comment .clasz { width: 0; }',
           },
-        ]},
+        ],
       },
       [
         {url: 'foo.css', transferSize: 20 * KB, resourceType},

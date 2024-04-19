@@ -1,7 +1,7 @@
 /**
- * @license Copyright 2016 The Lighthouse Authors. All Rights Reserved.
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the License. You may obtain a copy of the License at http://www.apache.org/licenses/LICENSE-2.0
- * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific language governing permissions and limitations under the License.
+ * @license
+ * Copyright 2016 Google LLC
+ * SPDX-License-Identifier: Apache-2.0
  */
 
 /**
@@ -27,11 +27,9 @@ import * as commands from './commands/commands.js';
 import * as Printer from './printer.js';
 import {getFlags} from './cli-flags.js';
 import {runLighthouse} from './run.js';
-import {generateConfig, generateLegacyConfig} from '../core/index.js';
 import {askPermission} from './sentry-prompt.js';
-import {LH_ROOT} from '../root.js';
+import {LH_ROOT} from '../shared/root.js';
 import {Sentry} from '../core/lib/sentry.js';
-import {getConfigDisplayString} from '../core/config/config.js';
 
 const pkg = JSON.parse(fs.readFileSync(LH_ROOT + '/package.json', 'utf-8'));
 
@@ -65,27 +63,20 @@ async function begin() {
 
   const urlUnderTest = cliFlags._[0];
 
-  /** @type {LH.Config.Json|undefined} */
-  let configJson;
+  /** @type {LH.Config|undefined} */
+  let config;
   if (cliFlags.configPath) {
     // Resolve the config file path relative to where cli was called.
     cliFlags.configPath = path.resolve(process.cwd(), cliFlags.configPath);
 
     if (cliFlags.configPath.endsWith('.json')) {
-      configJson = JSON.parse(fs.readFileSync(cliFlags.configPath, 'utf-8'));
+      config = JSON.parse(fs.readFileSync(cliFlags.configPath, 'utf-8'));
     } else {
       const configModuleUrl = url.pathToFileURL(cliFlags.configPath).href;
-      configJson = (await import(configModuleUrl)).default;
+      config = (await import(configModuleUrl)).default;
     }
   } else if (cliFlags.preset) {
-    configJson = (await import(`../core/config/${cliFlags.preset}-config.js`)).default;
-  }
-
-  if (cliFlags.budgetPath) {
-    cliFlags.budgetPath = path.resolve(process.cwd(), cliFlags.budgetPath);
-    /** @type {Array<LH.Budget>} */
-    const parsedBudget = JSON.parse(fs.readFileSync(cliFlags.budgetPath, 'utf8'));
-    cliFlags.budgets = parsedBudget;
+    config = (await import(`../core/config/${cliFlags.preset}-config.js`)).default;
   }
 
   // set logging preferences
@@ -116,19 +107,8 @@ async function begin() {
     cliFlags.precomputedLanternData = data;
   }
 
-  if (cliFlags.printConfig) {
-    if (cliFlags.legacyNavigation) {
-      const config = await generateLegacyConfig(configJson, cliFlags);
-      process.stdout.write(config.getPrintString());
-    } else {
-      const config = await generateConfig(configJson, cliFlags);
-      process.stdout.write(getConfigDisplayString(config));
-    }
-    return;
-  }
-
   // By default, cliFlags.enableErrorReporting is undefined so the user is
-  // prompted. This can be overriden with an explicit flag or by the cached
+  // prompted. This can be overridden with an explicit flag or by the cached
   // answer returned by askPermission().
   if (typeof cliFlags.enableErrorReporting === 'undefined') {
     cliFlags.enableErrorReporting = await askPermission();
@@ -137,6 +117,7 @@ async function begin() {
     await Sentry.init({
       url: urlUnderTest,
       flags: cliFlags,
+      config,
       environmentData: {
         serverName: 'redacted', // prevent sentry from using hostname
         environment: isDev() ? 'development' : 'production',
@@ -145,7 +126,7 @@ async function begin() {
     });
   }
 
-  return runLighthouse(urlUnderTest, cliFlags, configJson);
+  return runLighthouse(urlUnderTest, cliFlags, config);
 }
 
 export {

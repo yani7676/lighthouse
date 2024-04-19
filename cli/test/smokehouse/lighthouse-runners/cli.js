@@ -1,7 +1,7 @@
 /**
- * @license Copyright 2019 The Lighthouse Authors. All Rights Reserved.
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the License. You may obtain a copy of the License at http://www.apache.org/licenses/LICENSE-2.0
- * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific language governing permissions and limitations under the License.
+ * @license
+ * Copyright 2019 Google LLC
+ * SPDX-License-Identifier: Apache-2.0
  */
 
 /**
@@ -20,23 +20,23 @@ import log from 'lighthouse-logger';
 import * as assetSaver from '../../../../core/lib/asset-saver.js';
 import {LocalConsole} from '../lib/local-console.js';
 import {ChildProcessError} from '../lib/child-process-error.js';
-import {LH_ROOT} from '../../../../root.js';
+import {LH_ROOT} from '../../../../shared/root.js';
 
 const execFileAsync = promisify(execFile);
 
 /**
  * Launch Chrome and do a full Lighthouse run via the Lighthouse CLI.
  * @param {string} url
- * @param {LH.Config.Json=} configJson
- * @param {{isDebug?: boolean, useFraggleRock?: boolean}=} testRunnerOptions
+ * @param {LH.Config=} config
+ * @param {Smokehouse.SmokehouseOptions['testRunnerOptions']=} testRunnerOptions
  * @return {Promise<{lhr: LH.Result, artifacts: LH.Artifacts, log: string}>}
  */
-async function runLighthouse(url, configJson, testRunnerOptions = {}) {
+async function runLighthouse(url, config, testRunnerOptions = {}) {
   const {isDebug} = testRunnerOptions;
   const tmpDir = `${LH_ROOT}/.tmp/smokehouse`;
   await fs.mkdir(tmpDir, {recursive: true});
   const tmpPath = await fs.mkdtemp(`${tmpDir}/smokehouse-`);
-  return internalRun(url, tmpPath, configJson, testRunnerOptions)
+  return internalRun(url, tmpPath, config, testRunnerOptions)
     // Wait for internalRun() before removing scratch directory.
     .finally(() => !isDebug && fs.rm(tmpPath, {recursive: true, force: true}));
 }
@@ -45,12 +45,12 @@ async function runLighthouse(url, configJson, testRunnerOptions = {}) {
  * Internal runner.
  * @param {string} url
  * @param {string} tmpPath
- * @param {LH.Config.Json=} configJson
- * @param {{isDebug?: boolean, useLegacyNavigation?: boolean}=} options
+ * @param {LH.Config=} config
+ * @param {Smokehouse.SmokehouseOptions['testRunnerOptions']=} options
  * @return {Promise<{lhr: LH.Result, artifacts: LH.Artifacts, log: string}>}
  */
-async function internalRun(url, tmpPath, configJson, options) {
-  const {isDebug = false, useLegacyNavigation = false} = options || {};
+async function internalRun(url, tmpPath, config, options) {
+  const {isDebug, headless} = options || {};
   const localConsole = new LocalConsole();
 
   const outputPath = `${tmpPath}/smokehouse.report.json`;
@@ -67,14 +67,12 @@ async function internalRun(url, tmpPath, configJson, options) {
     '--quiet',
   ];
 
-  if (useLegacyNavigation) {
-    args.push('--legacy-navigation');
-  }
+  if (headless) args.push('--chrome-flags="--headless=new"');
 
   // Config can be optionally provided.
-  if (configJson) {
+  if (config) {
     const configPath = `${tmpPath}/config.json`;
-    await fs.writeFile(configPath, JSON.stringify(configJson));
+    await fs.writeFile(configPath, JSON.stringify(config));
     args.push(`--config-path=${configPath}`);
   }
 

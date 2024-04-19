@@ -1,7 +1,7 @@
 /**
- * @license Copyright 2020 The Lighthouse Authors. All Rights Reserved.
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the License. You may obtain a copy of the License at http://www.apache.org/licenses/LICENSE-2.0
- * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific language governing permissions and limitations under the License.
+ * @license
+ * Copyright 2020 Google LLC
+ * SPDX-License-Identifier: Apache-2.0
  */
 
 /* eslint-disable no-console */
@@ -15,7 +15,7 @@ import glob from 'glob';
 import {makeHash} from './hash.js';
 import LegacyJavascript from '../../audits/byte-efficiency/legacy-javascript.js';
 import {networkRecordsToDevtoolsLog} from '../../test/network-records-to-devtools-log.js';
-import {LH_ROOT} from '../../../root.js';
+import {LH_ROOT} from '../../../shared/root.js';
 import {readJson} from '../../test/test-utils.js';
 
 const scriptDir = `${LH_ROOT}/core/scripts/legacy-javascript`;
@@ -34,14 +34,14 @@ const STAGE = process.env.STAGE || 'all';
 const mainCode = fs.readFileSync(`${scriptDir}/main.js`, 'utf-8');
 
 const plugins = LegacyJavascript.getTransformPatterns().map(pattern => pattern.name);
-const polyfills = LegacyJavascript.getPolyfillData();
+const polyfills = LegacyJavascript.getCoreJsPolyfillData();
 
 /**
  * @param {string} command
  * @param {string[]} args
  */
 function runCommand(command, args) {
-  execFileSync(command, args, {cwd: scriptDir});
+  return execFileSync(command, args, {cwd: scriptDir});
 }
 
 /**
@@ -81,7 +81,7 @@ async function createVariant(options) {
       `<title>${name}</title><script src=main.bundle.min.js></script><p>${name}</p>`);
 
     // Note: No babelrc will make babel a glorified `cp`.
-    runCommand('yarn', [
+    const babelOutputBuffer = runCommand('yarn', [
       'babel',
       `${dir}/main.js`,
       '--config-file', `${dir}/.babelrc`,
@@ -89,6 +89,7 @@ async function createVariant(options) {
       '-o', `${dir}/main.transpiled.js`,
       '--source-maps', 'inline',
     ]);
+    fs.writeFileSync(`${dir}/babel-stdout.txt`, babelOutputBuffer.toString());
 
     // Transform any require statements (like for core-js) into a big bundle.
     runCommand('yarn', [
@@ -136,19 +137,20 @@ function getLegacyJavascriptResults(code, map, {sourceMaps}) {
   const documentUrl = 'http://localhost/index.html'; // These URLs don't matter.
   const scriptUrl = 'https://localhost/main.bundle.min.js';
   const scriptId = '10001';
+  const responseHeaders = [{name: 'Content-Encoding', value: 'gzip'}];
   const networkRecords = [
-    {url: documentUrl, requestId: '1000.1', resourceType: /** @type {const} */ ('Document')},
-    {url: scriptUrl, requestId: '1000.2'},
+    {url: documentUrl, requestId: '1000.1', resourceType: /** @type {const} */ ('Document'),
+      responseHeaders},
+    {url: scriptUrl, requestId: '1000.2', responseHeaders},
   ];
   const devtoolsLogs = networkRecordsToDevtoolsLog(networkRecords);
 
   /** @type {Pick<LH.Artifacts, 'devtoolsLogs'|'URL'|'Scripts'|'SourceMaps'>} */
   const artifacts = {
     URL: {
-      initialUrl: 'about:blank',
       requestedUrl: documentUrl,
       mainDocumentUrl: documentUrl,
-      finalUrl: documentUrl,
+      finalDisplayedUrl: documentUrl,
     },
     devtoolsLogs: {
       [LegacyJavascript.DEFAULT_PASS]: devtoolsLogs,
@@ -245,15 +247,15 @@ async function main() {
     });
   }
 
-  for (const coreJsVersion of ['2.6.12', '3.19.1']) {
+  for (const coreJsVersion of ['2.6.12', '3.27.2']) {
     const major = coreJsVersion.split('.')[0];
     removeCoreJs();
     installCoreJs(coreJsVersion);
 
     const moduleOptions = [
-      {esmodules: false},
+      {esmodules: false, bugfixes: false},
       // Output: https://gist.github.com/connorjclark/515d05094ffd1fc038894a77156bf226
-      {esmodules: true},
+      {esmodules: true, bugfixes: false},
       {esmodules: true, bugfixes: true},
     ];
     for (const {esmodules, bugfixes} of moduleOptions) {
@@ -270,6 +272,7 @@ async function main() {
                 useBuiltIns: 'entry',
                 corejs: major,
                 bugfixes,
+                debug: true,
               },
             ],
           ],

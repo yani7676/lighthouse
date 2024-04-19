@@ -1,18 +1,7 @@
 /**
  * @license
- * Copyright 2017 The Lighthouse Authors. All Rights Reserved.
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS-IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * Copyright 2017 Google LLC
+ * SPDX-License-Identifier: Apache-2.0
  */
 
 /**
@@ -20,7 +9,7 @@
  * critical request chains network tree.
  */
 
-import {Util} from './util.js';
+import {Globals} from './report-globals.js';
 
 /** @typedef {import('./dom.js').DOM} DOM */
 /** @typedef {import('./details-renderer.js').DetailsRenderer} DetailsRenderer */
@@ -136,9 +125,10 @@ class CriticalRequestChainRenderer {
     if (!segment.hasChildren) {
       const {startTime, endTime, transferSize} = segment.node.request;
       const span = dom.createElement('span', 'lh-crc-node__chain-duration');
-      span.textContent = ' - ' + Util.i18n.formatMilliseconds((endTime - startTime) * 1000) + ', ';
+      span.textContent =
+        ' - ' + Globals.i18n.formatMilliseconds((endTime - startTime) * 1000) + ', ';
       const span2 = dom.createElement('span', 'lh-crc-node__chain-duration');
-      span2.textContent = Util.i18n.formatBytesToKiB(transferSize, 0.01);
+      span2.textContent = Globals.i18n.formatBytesToKiB(transferSize, 0.01);
 
       treevalEl.append(span, span2);
     }
@@ -177,11 +167,11 @@ class CriticalRequestChainRenderer {
     const containerEl = dom.find('.lh-crc', tmpl);
 
     // Fill in top summary.
-    dom.find('.lh-crc-initial-nav', tmpl).textContent = Util.i18n.strings.crcInitialNavigation;
+    dom.find('.lh-crc-initial-nav', tmpl).textContent = Globals.strings.crcInitialNavigation;
     dom.find('.lh-crc__longest_duration_label', tmpl).textContent =
-        Util.i18n.strings.crcLongestDurationLabel;
+        Globals.strings.crcLongestDurationLabel;
     dom.find('.lh-crc__longest_duration', tmpl).textContent =
-        Util.i18n.formatMilliseconds(details.longestChain.duration);
+        Globals.i18n.formatMilliseconds(details.longestChain.duration);
 
     // Construct visual tree.
     const root = CRCRenderer.initTree(details.chains);

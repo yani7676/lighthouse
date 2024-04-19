@@ -1,7 +1,7 @@
 /**
- * @license Copyright 2021 The Lighthouse Authors. All Rights Reserved.
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the License. You may obtain a copy of the License at http://www.apache.org/licenses/LICENSE-2.0
- * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific language governing permissions and limitations under the License.
+ * @license
+ * Copyright 2021 Google LLC
+ * SPDX-License-Identifier: Apache-2.0
  */
 
 import jestMock from 'jest-mock';
@@ -12,9 +12,10 @@ import {FlowStepThumbnail} from '../src/common';
 
 let lhr: LH.Result;
 
-timers.useFakeTimers();
-
 describe('FlowStepThumbnail', () => {
+  before(() => timers.useFakeTimers());
+  after(() => timers.dispose());
+
   beforeEach(() => {
     global.console.warn = jestMock.fn();
 
@@ -22,13 +23,6 @@ describe('FlowStepThumbnail', () => {
       gatherMode: 'navigation',
       configSettings: {screenEmulation: {width: 400, height: 600}},
       audits: {
-        'full-page-screenshot': {
-          details: {
-            type: 'full-page-screenshot',
-            screenshot: {data: 'FPS', width: 400, height: 600},
-            nodes: {},
-          },
-        },
         'screenshot-thumbnails': {
           details: {
             type: 'filmstrip',
@@ -38,6 +32,10 @@ describe('FlowStepThumbnail', () => {
             ],
           },
         },
+      },
+      fullPageScreenshot: {
+        screenshot: {data: 'FPS', width: 400, height: 600},
+        nodes: {},
       },
     } as any;
   });

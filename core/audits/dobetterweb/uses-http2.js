@@ -1,7 +1,7 @@
 /**
- * @license Copyright 2016 The Lighthouse Authors. All Rights Reserved.
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the License. You may obtain a copy of the License at http://www.apache.org/licenses/LICENSE-2.0
- * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific language governing permissions and limitations under the License.
+ * @license
+ * Copyright 2016 Google LLC
+ * SPDX-License-Identifier: Apache-2.0
  */
 
 /**
@@ -9,26 +9,25 @@
  * origin are over the http/2 protocol.
  */
 
-/** @typedef {import('../../lib/dependency-graph/simulator/simulator').Simulator} Simulator */
-/** @typedef {import('../../lib/dependency-graph/base-node.js').Node} Node */
+/** @typedef {import('../../lib/lantern/simulator/simulator.js').Simulator} Simulator */
+/** @typedef {import('../../lib/lantern/base-node.js').Node<LH.Artifacts.NetworkRequest>} Node */
 
 import {Audit} from '../audit.js';
-import ThirdParty from '../../lib/third-party-web.js';
+import {EntityClassification} from '../../computed/entity-classification.js';
 import UrlUtils from '../../lib/url-utils.js';
-import {ByteEfficiencyAudit} from '../byte-efficiency/byte-efficiency-audit.js';
-import {LanternInteractive} from '../../computed/metrics/lantern-interactive.js';
 import {NetworkRequest} from '../../lib/network-request.js';
 import {NetworkRecords} from '../../computed/network-records.js';
 import {LoadSimulator} from '../../computed/load-simulator.js';
-import {PageDependencyGraph} from '../../computed/page-dependency-graph.js';
+import {LanternLargestContentfulPaint} from '../../computed/metrics/lantern-largest-contentful-paint.js';
+import {LanternFirstContentfulPaint} from '../../computed/metrics/lantern-first-contentful-paint.js';
 import * as i18n from '../../lib/i18n/i18n.js';
 
 const UIStrings = {
   /** Imperative title of a Lighthouse audit that tells the user to enable HTTP/2. This is displayed in a list of audit titles that Lighthouse generates. */
   title: 'Use HTTP/2',
-  /** Description of a Lighthouse audit that tells the user why they should use HTTP/2. This is displayed after a user expands the section to see more. No character length limits. 'Learn More' becomes link text to additional documentation. */
+  /** Description of a Lighthouse audit that tells the user why they should use HTTP/2. This is displayed after a user expands the section to see more. No character length limits. The last sentence starting with 'Learn' becomes link text to additional documentation. */
   description: 'HTTP/2 offers many benefits over HTTP/1.1, including binary headers and ' +
-      'multiplexing. [Learn more about HTTP/2](https://web.dev/uses-http2/).',
+      'multiplexing. [Learn more about HTTP/2](https://developer.chrome.com/docs/lighthouse/best-practices/uses-http2/).',
   /** [ICU Syntax] Label identifying the number of network requests that were not served with HTTP/2. */
   displayValue: `{itemCount, plural,
     =1 {1 request not served via HTTP/2}
@@ -59,30 +58,29 @@ class UsesHTTP2Audit extends Audit {
       id: 'uses-http2',
       title: str_(UIStrings.title),
       description: str_(UIStrings.description),
-      scoreDisplayMode: Audit.SCORING_MODES.NUMERIC,
+      scoreDisplayMode: Audit.SCORING_MODES.METRIC_SAVINGS,
+      guidanceLevel: 3,
       supportedModes: ['timespan', 'navigation'],
       requiredArtifacts: ['URL', 'devtoolsLogs', 'traces', 'GatherContext'],
     };
   }
 
   /**
-   * Computes the estimated effect all results being converted to use http/2, the max of:
-   *
-   * - end time of the last long task in the provided graph
-   * - end time of the last node in the graph
+   * Computes the estimated effect of all results being converted to http/2 on the provided graph.
    *
    * @param {Array<{url: string}>} results
    * @param {Node} graph
    * @param {Simulator} simulator
-   * @return {number}
+   * @param {{label?: string}=} options
+   * @return {{savings: number, simulationBefore: LH.Gatherer.Simulation.Result, simulationAfter: LH.Gatherer.Simulation.Result}}
    */
-  static computeWasteWithTTIGraph(results, graph, simulator) {
-    const beforeLabel = `uses-http2-before`;
-    const afterLabel = `uses-http2-after`;
-    const flexibleOrdering = true;
+  static computeWasteWithGraph(results, graph, simulator, options) {
+    options = Object.assign({label: ''}, options);
+    const beforeLabel = `${this.meta.id}-${options.label}-before`;
+    const afterLabel = `${this.meta.id}-${options.label}-after`;
 
     const urlsToChange = new Set(results.map(result => result.url));
-    const simulationBefore = simulator.simulate(graph, {label: beforeLabel, flexibleOrdering});
+    const simulationBefore = simulator.simulate(graph, {label: beforeLabel});
 
     // Update all the protocols to reflect implementing our recommendations
     /** @type {Map<string, string>} */
@@ -92,26 +90,27 @@ class UsesHTTP2Audit extends Audit {
       if (!urlsToChange.has(node.record.url)) return;
 
       originalProtocols.set(node.record.requestId, node.record.protocol);
-      node.record.protocol = 'h2';
+      node.request.protocol = 'h2';
     });
 
-    const simulationAfter = simulator.simulate(graph, {label: afterLabel, flexibleOrdering});
+    const simulationAfter = simulator.simulate(graph, {label: afterLabel});
 
     // Restore the original protocol after we've done our simulation
     graph.traverse(node => {
       if (node.type !== 'network') return;
       const originalProtocol = originalProtocols.get(node.record.requestId);
       if (originalProtocol === undefined) return;
-      node.record.protocol = originalProtocol;
+      node.request.protocol = originalProtocol;
     });
 
-    const savingsOnOverallLoad = simulationBefore.timeInMs - simulationAfter.timeInMs;
-    const savingsOnTTI = LanternInteractive.getLastLongTaskEndTime(simulationBefore.nodeTimings) -
-      LanternInteractive.getLastLongTaskEndTime(simulationAfter.nodeTimings);
-    const savings = Math.max(savingsOnTTI, savingsOnOverallLoad);
+    const savings = simulationBefore.timeInMs - simulationAfter.timeInMs;
 
-    // Round waste to nearest 10ms
-    return Math.round(Math.max(savings, 0) / 10) * 10;
+    return {
+      // Round waste to nearest 10ms
+      savings: Math.round(Math.max(savings, 0) / 10) * 10,
+      simulationBefore,
+      simulationAfter,
+    };
   }
 
   /**
@@ -120,16 +119,22 @@ class UsesHTTP2Audit extends Audit {
    * for the same origin at the exact same time.
    *
    * @param {LH.Artifacts.NetworkRequest} networkRequest
+   * @param {LH.Artifacts.EntityClassification} classifiedEntities
    * @return {boolean}
    */
-  static isStaticAsset(networkRequest) {
+  static isMultiplexableStaticAsset(networkRequest, classifiedEntities) {
     if (!STATIC_RESOURCE_TYPES.has(networkRequest.resourceType)) return false;
 
     // Resources from third-parties that are less than 100 bytes are usually tracking pixels, not actual resources.
     // They can masquerade as static types though (gifs, documents, etc)
     if (networkRequest.resourceSize < 100) {
-      const entity = ThirdParty.getEntity(networkRequest.url);
-      if (entity) return false;
+      const entity = classifiedEntities.entityByUrl.get(networkRequest.url);
+      if (entity) {
+        // Third-party assets are multiplexable in their first-party context.
+        if (classifiedEntities.firstParty?.name === entity.name) return true;
+        // Skip recognizable third-parties' requests.
+        if (!entity.isUnrecognized) return false;
+      }
     }
 
     return true;
@@ -155,9 +160,10 @@ class UsesHTTP2Audit extends Audit {
    *      https://www.cachefly.com/http-2-is-not-a-magic-bullet/
    *
    * @param {Array<LH.Artifacts.NetworkRequest>} networkRecords
+   * @param {LH.Artifacts.EntityClassification} classifiedEntities
    * @return {Array<{url: string, protocol: string}>}
    */
-  static determineNonHttp2Resources(networkRecords) {
+  static determineNonHttp2Resources(networkRecords, classifiedEntities) {
     /** @type {Array<{url: string, protocol: string}>} */
     const nonHttp2Resources = [];
 
@@ -166,7 +172,7 @@ class UsesHTTP2Audit extends Audit {
     /** @type {Map<string, Array<LH.Artifacts.NetworkRequest>>} */
     const groupedByOrigin = new Map();
     for (const record of networkRecords) {
-      if (!UsesHTTP2Audit.isStaticAsset(record)) continue;
+      if (!UsesHTTP2Audit.isMultiplexableStaticAsset(record, classifiedEntities)) continue;
       if (UrlUtils.isLikeLocalhost(record.parsedURL.host)) continue;
       const existing = groupedByOrigin.get(record.parsedURL.securityOrigin) || [];
       existing.push(record);
@@ -199,11 +205,11 @@ class UsesHTTP2Audit extends Audit {
    * @return {Promise<LH.Audit.Product>}
    */
   static async audit(artifacts, context) {
-    const trace = artifacts.traces[Audit.DEFAULT_PASS];
     const devtoolsLog = artifacts.devtoolsLogs[Audit.DEFAULT_PASS];
     const URL = artifacts.URL;
     const networkRecords = await NetworkRecords.request(devtoolsLog, context);
-    const resources = UsesHTTP2Audit.determineNonHttp2Resources(networkRecords);
+    const classifiedEntities = await EntityClassification.request({URL, devtoolsLog}, context);
+    const resources = UsesHTTP2Audit.determineNonHttp2Resources(networkRecords, classifiedEntities);
 
     let displayValue;
     if (resources.length > 0) {
@@ -214,8 +220,8 @@ class UsesHTTP2Audit extends Audit {
     if (artifacts.GatherContext.gatherMode === 'timespan') {
       /** @type {LH.Audit.Details.Table['headings']} */
       const headings = [
-        {key: 'url', itemType: 'url', text: str_(i18n.UIStrings.columnURL)},
-        {key: 'protocol', itemType: 'text', text: str_(UIStrings.columnProtocol)},
+        {key: 'url', valueType: 'url', label: str_(i18n.UIStrings.columnURL)},
+        {key: 'protocol', valueType: 'text', label: str_(UIStrings.columnProtocol)},
       ];
 
       const details = Audit.makeTableDetails(headings, resources);
@@ -232,9 +238,22 @@ class UsesHTTP2Audit extends Audit {
       devtoolsLog,
       settings,
     };
-    const graph = await PageDependencyGraph.request({trace, devtoolsLog, URL}, context);
     const simulator = await LoadSimulator.request(simulatorOptions, context);
-    const wastedMs = UsesHTTP2Audit.computeWasteWithTTIGraph(resources, graph, simulator);
+    const metricComputationInput = Audit.makeMetricComputationDataInput(artifacts, context);
+
+    const {
+      pessimisticGraph: fcpGraph,
+    } = await LanternFirstContentfulPaint.request(metricComputationInput, context);
+    const {
+      pessimisticGraph: lcpGraph,
+    } = await LanternLargestContentfulPaint.request(metricComputationInput, context);
+
+    const wasteFcp =
+      UsesHTTP2Audit.computeWasteWithGraph(resources,
+        fcpGraph, simulator, {label: 'fcp'});
+    const wasteLcp =
+      UsesHTTP2Audit.computeWasteWithGraph(resources,
+        lcpGraph, simulator, {label: 'lcp'});
 
     /** @type {LH.Audit.Details.Opportunity['headings']} */
     const headings = [
@@ -242,14 +261,16 @@ class UsesHTTP2Audit extends Audit {
       {key: 'protocol', valueType: 'text', label: str_(UIStrings.columnProtocol)},
     ];
 
-    const details = Audit.makeOpportunityDetails(headings, resources, wastedMs);
+    const details = Audit.makeOpportunityDetails(headings, resources,
+      {overallSavingsMs: wasteLcp.savings});
 
     return {
       displayValue,
-      numericValue: wastedMs,
+      numericValue: wasteLcp.savings,
       numericUnit: 'millisecond',
-      score: ByteEfficiencyAudit.scoreForWastedMs(wastedMs),
+      score: resources.length ? 0 : 1,
       details,
+      metricSavings: {LCP: wasteLcp.savings, FCP: wasteFcp.savings},
     };
   }
 }

@@ -1,7 +1,7 @@
 /**
- * @license Copyright 2022 The Lighthouse Authors. All Rights Reserved.
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the License. You may obtain a copy of the License at http://www.apache.org/licenses/LICENSE-2.0
- * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific language governing permissions and limitations under the License.
+ * @license
+ * Copyright 2022 Google LLC
+ * SPDX-License-Identifier: Apache-2.0
  */
 
 /* eslint-disable no-irregular-whitespace */
@@ -54,15 +54,16 @@ Object {
       Object {
         "headings": Array [
           Object {
-            "itemType": "node",
             "key": "node",
-            "text": Object {
+            "label": Object {
               "formattedDefault": "Event target",
               "i18nId": "core/audits/work-during-interaction.js | eventTarget",
               "values": undefined,
             },
+            "valueType": "node",
           },
         ],
+        "isEntityGrouped": undefined,
         "items": Array [
           Object {
             "node": Object {
@@ -83,62 +84,65 @@ Object {
             },
           },
         ],
+        "skipSumming": undefined,
+        "sortedBy": undefined,
         "summary": undefined,
         "type": "table",
       },
       Object {
         "headings": Array [
           Object {
-            "itemType": "text",
             "key": "phase",
+            "label": "Phase",
             "subItemsHeading": Object {
-              "itemType": "url",
               "key": "url",
+              "valueType": "url",
             },
-            "text": "Phase",
+            "valueType": "text",
           },
           Object {
             "granularity": 1,
-            "itemType": "ms",
             "key": "total",
+            "label": "Total time",
             "subItemsHeading": Object {
               "granularity": 1,
-              "itemType": "ms",
               "key": "total",
+              "valueType": "ms",
             },
-            "text": "Total time",
+            "valueType": "ms",
           },
           Object {
-            "itemType": "ms",
             "key": null,
+            "label": "Script evaluation",
             "subItemsHeading": Object {
               "granularity": 1,
-              "itemType": "ms",
               "key": "scripting",
+              "valueType": "ms",
             },
-            "text": "Script evaluation",
+            "valueType": "ms",
           },
           Object {
-            "itemType": "ms",
             "key": null,
+            "label": "Style & Layout",
             "subItemsHeading": Object {
               "granularity": 1,
-              "itemType": "ms",
               "key": "layout",
+              "valueType": "ms",
             },
-            "text": "Style & Layout",
+            "valueType": "ms",
           },
           Object {
-            "itemType": "ms",
             "key": null,
+            "label": "Rendering",
             "subItemsHeading": Object {
               "granularity": 1,
-              "itemType": "ms",
               "key": "render",
+              "valueType": "ms",
             },
-            "text": "Rendering",
+            "valueType": "ms",
           },
         ],
+        "isEntityGrouped": undefined,
         "items": Array [
           Object {
             "phase": Object {
@@ -169,8 +173,8 @@ Object {
           },
           Object {
             "phase": Object {
-              "formattedDefault": "Processing time",
-              "i18nId": "core/audits/work-during-interaction.js | processingTime",
+              "formattedDefault": "Processing duration",
+              "i18nId": "core/audits/work-during-interaction.js | processingDuration",
               "values": undefined,
             },
             "subItems": Object {
@@ -215,6 +219,10 @@ Object {
             "total": 285,
           },
         ],
+        "skipSumming": undefined,
+        "sortedBy": Array [
+          "total",
+        ],
         "summary": undefined,
         "type": "table",
       },
@@ -229,7 +237,7 @@ Object {
             "endTs": 633282934296,
             "startTs": 633282649296,
           },
-          "processingTime": Object {
+          "processingDuration": Object {
             "endTs": 633282649296,
             "startTs": 633282608296,
           },
@@ -247,7 +255,11 @@ Object {
       "timeInMs": 368,
     },
   },
+  "metricSavings": Object {
+    "INP": 368,
+  },
   "score": 0,
+  "scoreDisplayMode": undefined,
 }
 `);
   });
@@ -272,6 +284,7 @@ Object {
     expect(result).toMatchObject({
       score: null,
       notApplicable: true,
+      metricSavings: {INP: 0},
     });
   });
 
@@ -282,6 +295,7 @@ Object {
     expect(result).toMatchObject({
       score: null,
       notApplicable: true,
+      metricSavings: {INP: 0},
     });
   });
 });

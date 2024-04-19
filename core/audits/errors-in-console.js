@@ -1,7 +1,7 @@
 /**
- * @license Copyright 2017 The Lighthouse Authors. All Rights Reserved.
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the License. You may obtain a copy of the License at http://www.apache.org/licenses/LICENSE-2.0
- * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific language governing permissions and limitations under the License.
+ * @license
+ * Copyright 2017 Google LLC
+ * SPDX-License-Identifier: Apache-2.0
  */
 
 /**
@@ -23,7 +23,7 @@ const UIStrings = {
   /** Description of a Lighthouse audit that tells the user why errors being logged to the devtools console are a cause for concern and so should be fixed. This is displayed after a user expands the section to see more. No character length limits. */
   description: 'Errors logged to the console indicate unresolved problems. ' +
     'They can come from network request failures and other browser concerns. ' +
-    '[Learn more about this errors in console diagnostic audit](https://web.dev/errors-in-console/)',
+    '[Learn more about this errors in console diagnostic audit](https://developer.chrome.com/docs/lighthouse/best-practices/errors-in-console/)',
 };
 
 const str_ = i18n.createIcuMessageFn(import.meta.url, UIStrings);
@@ -100,8 +100,10 @@ class ErrorLogs extends Audit {
 
     /** @type {LH.Audit.Details.Table['headings']} */
     const headings = [
-      {key: 'sourceLocation', itemType: 'source-location', text: str_(i18n.UIStrings.columnSource)},
-      {key: 'description', itemType: 'code', text: str_(i18n.UIStrings.columnDescription)},
+      /* eslint-disable max-len */
+      {key: 'sourceLocation', valueType: 'source-location', label: str_(i18n.UIStrings.columnSource)},
+      {key: 'description', valueType: 'code', label: str_(i18n.UIStrings.columnDescription)},
+      /* eslint-enable max-len */
     ];
 
     const details = Audit.makeTableDetails(headings, tableRows);

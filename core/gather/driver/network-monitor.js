@@ -1,7 +1,7 @@
 /**
- * @license Copyright 2021 The Lighthouse Authors. All Rights Reserved.
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the License. You may obtain a copy of the License at http://www.apache.org/licenses/LICENSE-2.0
- * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific language governing permissions and limitations under the License.
+ * @license
+ * Copyright 2021 Google LLC
+ * SPDX-License-Identifier: Apache-2.0
  */
 
 /**
@@ -13,6 +13,7 @@ import {EventEmitter} from 'events';
 
 import log from 'lighthouse-logger';
 
+import * as LH from '../../../types/lh.js';
 import {NetworkRecorder} from '../../lib/network-recorder.js';
 import {NetworkRequest} from '../../lib/network-request.js';
 import UrlUtils from '../../lib/url-utils.js';
@@ -30,15 +31,14 @@ class NetworkMonitor extends NetworkMonitorEventEmitter {
   /** @type {Array<LH.Crdp.Page.Frame>} */
   _frameNavigations = [];
 
-  // TODO(FR-COMPAT): switch to real TargetManager when legacy removed.
-  /** @param {LH.Gatherer.FRTransitionalDriver['targetManager']} targetManager */
+  /** @param {LH.Gatherer.Driver['targetManager']} targetManager */
   constructor(targetManager) {
     super();
 
-    /** @type {LH.Gatherer.FRTransitionalDriver['targetManager']} */
+    /** @type {LH.Gatherer.Driver['targetManager']} */
     this._targetManager = targetManager;
 
-    /** @type {LH.Gatherer.FRProtocolSession} */
+    /** @type {LH.Gatherer.ProtocolSession} */
     this._session = targetManager.rootSession();
 
     /** @param {LH.Crdp.Page.FrameNavigatedEvent} event */
@@ -95,9 +95,7 @@ class NetworkMonitor extends NetworkMonitorEventEmitter {
     const frameNavigations = this._frameNavigations;
     if (!frameNavigations.length) return {};
 
-    const resourceTreeResponse = await this._session.sendCommand('Page.getResourceTree');
-    const mainFrameId = resourceTreeResponse.frameTree.frame.id;
-    const mainFrameNavigations = frameNavigations.filter(frame => frame.id === mainFrameId);
+    const mainFrameNavigations = frameNavigations.filter(frame => !frame.parentId);
     if (!mainFrameNavigations.length) log.warn('NetworkMonitor', 'No detected navigations');
 
     // The requested URL is the initiator request for the first frame navigation.
@@ -218,9 +216,9 @@ class NetworkMonitor extends NetworkMonitorEventEmitter {
       if (request.protocol === 'ws' || request.protocol === 'wss') return;
 
       // convert the network timestamp to ms
-      timeBoundaries.push({time: request.startTime * 1000, isStart: true});
+      timeBoundaries.push({time: request.networkRequestTime * 1000, isStart: true});
       if (request.finished) {
-        timeBoundaries.push({time: request.endTime * 1000, isStart: false});
+        timeBoundaries.push({time: request.networkEndTime * 1000, isStart: false});
       }
     });
 

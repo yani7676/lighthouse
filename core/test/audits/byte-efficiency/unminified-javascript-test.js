@@ -1,10 +1,10 @@
 /**
- * @license Copyright 2017 The Lighthouse Authors. All Rights Reserved.
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the License. You may obtain a copy of the License at http://www.apache.org/licenses/LICENSE-2.0
- * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific language governing permissions and limitations under the License.
+ * @license
+ * Copyright 2017 Google LLC
+ * SPDX-License-Identifier: Apache-2.0
  */
 
-import {strict as assert} from 'assert';
+import assert from 'assert/strict';
 
 import UnminifiedJavascriptAudit from '../../../audits/byte-efficiency/unminified-javascript.js';
 import {createScript} from '../../test-utils.js';
@@ -14,8 +14,10 @@ const KB = 1024;
 const resourceType = 'Script';
 describe('Page uses optimized responses', () => {
   it('fails when given unminified scripts', () => {
+    const responseHeaders = [{name: 'Content-Encoding', value: 'gzip'}];
+    const commonRecord = {resourceType, responseHeaders};
     const auditResult = UnminifiedJavascriptAudit.audit_({
-      URL: {finalUrl: 'https://www.example.com'},
+      URL: {finalDisplayedUrl: 'https://www.example.com'},
       Scripts: [
         {
           scriptId: '123.1',
@@ -59,10 +61,10 @@ describe('Page uses optimized responses', () => {
         },
       ].map(createScript),
     }, [
-      {requestId: '123.1', url: 'foo.js', transferSize: 20 * KB, resourceType},
-      {requestId: '123.2', url: 'other.js', transferSize: 50 * KB, resourceType},
-      {requestId: '123.3', url: 'valid-ish.js', transferSize: 100 * KB, resourceType},
-      {requestId: '123.4', url: 'invalid.js', transferSize: 100 * KB, resourceType},
+      {requestId: '123.1', url: 'foo.js', transferSize: 20 * KB, ...commonRecord},
+      {requestId: '123.2', url: 'other.js', transferSize: 50 * KB, ...commonRecord},
+      {requestId: '123.3', url: 'valid-ish.js', transferSize: 100 * KB, ...commonRecord},
+      {requestId: '123.4', url: 'invalid.js', transferSize: 100 * KB, ...commonRecord},
     ]);
 
     const results = auditResult.items.map(item => Object.assign(item, {
@@ -79,7 +81,7 @@ describe('Page uses optimized responses', () => {
 
   it('fails when given unminified scripts even with missing network record', () => {
     const auditResult = UnminifiedJavascriptAudit.audit_({
-      URL: {finalUrl: 'https://www.example.com'},
+      URL: {finalDisplayedUrl: 'https://www.example.com'},
       Scripts: [
         {
           startLine: 30,
@@ -113,7 +115,7 @@ describe('Page uses optimized responses', () => {
 
   it('passes when scripts are already minified', () => {
     const auditResult = UnminifiedJavascriptAudit.audit_({
-      URL: {finalUrl: 'https://www.example.com'},
+      URL: {finalDisplayedUrl: 'https://www.example.com'},
       Scripts: [
         {
           scriptId: '123.1',

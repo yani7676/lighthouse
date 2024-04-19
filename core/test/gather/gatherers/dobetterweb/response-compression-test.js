@@ -1,25 +1,18 @@
 /**
- * @license Copyright 2017 The Lighthouse Authors. All Rights Reserved.
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the License. You may obtain a copy of the License at http://www.apache.org/licenses/LICENSE-2.0
- * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific language governing permissions and limitations under the License.
+ * @license
+ * Copyright 2017 Google LLC
+ * SPDX-License-Identifier: Apache-2.0
  */
 
 import {createMockContext, mockDriverSubmodules} from '../../../gather/mock-driver.js';
-// import ResponseCompression from '../../../../gather/gatherers/dobetterweb/response-compression.js';
-
-// Some imports needs to be done dynamically, so that their dependencies will be mocked.
-// See: https://jestjs.io/docs/ecmascript-modules#differences-between-esm-and-commonjs
-//      https://github.com/facebook/jest/issues/10025
-/** @typedef {import('../../../../gather/gatherers/dobetterweb/response-compression.js')} ResponseCompression */
-/** @type {typeof import('../../../../gather/gatherers/dobetterweb/response-compression.js')} */
-let ResponseCompression;
-
-before(async () => {
-  ResponseCompression =
-    (await import('../../../../gather/gatherers/dobetterweb/response-compression.js')).default;
-});
 
 const mocks = await mockDriverSubmodules();
+
+// Some imports needs to be done dynamically, so that their dependencies will be mocked.
+// https://github.com/GoogleChrome/lighthouse/blob/main/docs/hacking-tips.md#mocking-modules-with-testdouble
+/** @typedef {import('../../../../gather/gatherers/dobetterweb/response-compression.js')} ResponseCompression */
+const ResponseCompression =
+  (await import('../../../../gather/gatherers/dobetterweb/response-compression.js')).default;
 
 const networkRecords = [
   {
@@ -36,6 +29,7 @@ const networkRecords = [
     }],
     content: 'aaabbbccc',
     finished: true,
+    sessionTargetType: 'page',
   },
   {
     url: 'http://google.com/index.css',
@@ -48,6 +42,7 @@ const networkRecords = [
     responseHeaders: [],
     content: 'abcabc',
     finished: true,
+    sessionTargetType: 'page',
   },
   {
     url: 'http://google.com/index.json',
@@ -60,9 +55,10 @@ const networkRecords = [
     responseHeaders: [],
     content: '1234567',
     finished: true,
+    sessionTargetType: 'page',
   },
   {
-    url: 'http://google.com/index.json',
+    url: 'http://google.com/index-oopif.json',
     statusCode: 200,
     mimeType: 'application/json',
     requestId: 27,
@@ -72,7 +68,7 @@ const networkRecords = [
     responseHeaders: [],
     content: '1234567',
     finished: true,
-    sessionId: 'oopif', // ignore for being from oopif
+    sessionTargetType: 'iframe', // ignore for being from oopif
   },
   {
     url: 'http://google.com/index.json',
@@ -85,6 +81,7 @@ const networkRecords = [
     responseHeaders: [],
     content: '1234567',
     finished: true,
+    sessionTargetType: 'page',
   },
   {
     url: 'http://google.com/other.json',
@@ -97,6 +94,7 @@ const networkRecords = [
     responseHeaders: [],
     content: '1234567',
     finished: false, // ignore for not finishing
+    sessionTargetType: 'page',
   },
   {
     url: 'http://google.com/index.jpg',
@@ -109,6 +107,7 @@ const networkRecords = [
     responseHeaders: [],
     content: 'aaaaaaaaaa',
     finished: true,
+    sessionTargetType: 'page',
   },
   {
     url: 'http://google.com/helloworld.mp4',
@@ -121,6 +120,20 @@ const networkRecords = [
     responseHeaders: [],
     content: 'bbbbbbbb',
     finished: true,
+    sessionTargetType: 'page',
+  },
+  {
+    url: 'http://google.com/index-worker.json',
+    statusCode: 200,
+    mimeType: 'application/json',
+    requestId: 28,
+    resourceSize: 7,
+    transferSize: 8,
+    resourceType: 'XHR',
+    responseHeaders: [],
+    content: '1234567',
+    finished: true,
+    sessionTargetType: 'worker', // ignore for being from a worker
   },
 ];
 
@@ -138,25 +151,32 @@ describe('Optimized responses', () => {
   });
 
   it('returns only text and non encoded responses', async () => {
-    const artifact = await gatherer._getArtifact(context, networkRecords);
+    const artifact = await gatherer.getCompressibleRecords(context, networkRecords);
     expect(artifact).toHaveLength(2);
     expect(artifact[0].url).toMatch(/index\.css$/);
     expect(artifact[1].url).toMatch(/index\.json$/);
   });
 
   it('computes sizes', async () => {
-    const artifact = await gatherer._getArtifact(context, networkRecords);
+    const artifact = await gatherer.getCompressibleRecords(context, networkRecords);
     expect(artifact).toHaveLength(2);
     expect(artifact[0].resourceSize).toEqual(6);
     expect(artifact[0].gzipSize).toEqual(26);
   });
 
-  it('recovers from driver errors', async () => {
-    mocks.networkMock.fetchResponseBodyFromCache.mockRejectedValue(new Error('Failed'));
-    const artifact = await gatherer._getArtifact(context, networkRecords);
+  it('recovers from cache ejection errors', async () => {
+    mocks.networkMock.fetchResponseBodyFromCache.mockRejectedValue(
+      new Error('No resource with given identifier found'));
+    const artifact = await gatherer.getCompressibleRecords(context, networkRecords);
     expect(artifact).toHaveLength(2);
     expect(artifact[0].resourceSize).toEqual(6);
     expect(artifact[0].gzipSize).toBeUndefined();
+  });
+
+  it('does not suppress other errors', async () => {
+    mocks.networkMock.fetchResponseBodyFromCache.mockRejectedValue(new Error('Failed'));
+    await expect(gatherer.getCompressibleRecords(context, networkRecords))
+      .rejects.toThrow();
   });
 
   it('ignores responses from installed Chrome extensions', async () => {
@@ -171,6 +191,7 @@ describe('Optimized responses', () => {
         responseHeaders: [],
         content: 'aaaaaaaaaa',
         finished: true,
+        sessionTargetType: 'page',
       },
       {
         url: 'http://google.com/chrome-extension.css',
@@ -182,10 +203,11 @@ describe('Optimized responses', () => {
         responseHeaders: [],
         content: 'aaaaaaaaaa',
         finished: true,
+        sessionTargetType: 'page',
       },
     ];
 
-    const artifact = await gatherer._getArtifact(context, networkRecords);
+    const artifact = await gatherer.getCompressibleRecords(context, networkRecords);
     expect(artifact).toHaveLength(1);
     expect(artifact[0].resourceSize).toEqual(123);
   });

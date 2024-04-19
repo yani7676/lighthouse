@@ -1,7 +1,7 @@
 /**
- * @license Copyright 2021 The Lighthouse Authors. All Rights Reserved.
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the License. You may obtain a copy of the License at http://www.apache.org/licenses/LICENSE-2.0
- * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific language governing permissions and limitations under the License.
+ * @license
+ * Copyright 2021 Google LLC
+ * SPDX-License-Identifier: Apache-2.0
  */
 
 import puppeteer from 'puppeteer-core';
@@ -14,7 +14,6 @@ import * as prepare from './driver/prepare.js';
 import {gotoURL} from './driver/navigation.js';
 import * as storage from './driver/storage.js';
 import * as emulation from '../lib/emulation.js';
-import {defaultNavigationConfig} from '../config/constants.js';
 import {initializeConfig} from '../config/config.js';
 import {getBaseArtifacts, finalizeArtifacts} from './base-artifacts.js';
 import * as format from '../../shared/localization/format.js';
@@ -29,10 +28,9 @@ import {NetworkRecords} from '../computed/network-records.js';
  * @typedef NavigationContext
  * @property {Driver} driver
  * @property {LH.Puppeteer.Page} page
- * @property {LH.Config.FRConfig} config
- * @property {LH.Config.NavigationDefn} navigation
+ * @property {LH.Config.ResolvedConfig} resolvedConfig
  * @property {LH.NavigationRequestor} requestor
- * @property {LH.FRBaseArtifacts} baseArtifacts
+ * @property {LH.BaseArtifacts} baseArtifacts
  * @property {Map<string, LH.ArbitraryEqualityMap>} computedCache
  */
 
@@ -42,44 +40,31 @@ const DEFAULT_HOSTNAME = '127.0.0.1';
 const DEFAULT_PORT = 9222;
 
 /**
- * @param {{driver: Driver, config: LH.Config.FRConfig, requestor: LH.NavigationRequestor}} args
- * @return {Promise<{baseArtifacts: LH.FRBaseArtifacts}>}
+ * @param {{driver: Driver, resolvedConfig: LH.Config.ResolvedConfig, requestor: LH.NavigationRequestor}} args
+ * @return {Promise<{baseArtifacts: LH.BaseArtifacts}>}
  */
-async function _setup({driver, config, requestor}) {
+async function _setup({driver, resolvedConfig, requestor}) {
   await driver.connect();
 
   // We can't trigger the navigation through user interaction if we reset the page before starting.
-  if (typeof requestor === 'string' && !config.settings.skipAboutBlank) {
-    await gotoURL(driver, defaultNavigationConfig.blankPage, {waitUntil: ['navigated']});
+  if (typeof requestor === 'string' && !resolvedConfig.settings.skipAboutBlank) {
+    // Disable network monitor on the blank page to prevent it from picking up network requests and
+    // frame navigated events before the run starts.
+    await driver._networkMonitor?.disable();
+
+    await gotoURL(driver, resolvedConfig.settings.blankPage, {waitUntil: ['navigated']});
+
+    await driver._networkMonitor?.enable();
   }
 
-  const baseArtifacts = await getBaseArtifacts(config, driver, {gatherMode: 'navigation'});
+  const baseArtifacts = await getBaseArtifacts(resolvedConfig, driver, {gatherMode: 'navigation'});
 
-  await prepare.prepareTargetForNavigationMode(driver, config.settings);
+  const {warnings} =
+    await prepare.prepareTargetForNavigationMode(driver, resolvedConfig.settings, requestor);
+
+  baseArtifacts.LighthouseRunWarnings.push(...warnings);
 
   return {baseArtifacts};
-}
-
-/**
- * @param {NavigationContext} navigationContext
- * @return {Promise<{warnings: Array<LH.IcuMessage>}>}
- */
-async function _setupNavigation({requestor, driver, navigation, config}) {
-  // We can't trigger the navigation through user interaction if we reset the page before starting.
-  if (typeof requestor === 'string' && !config.settings.skipAboutBlank) {
-    await gotoURL(driver, navigation.blankPage, {...navigation, waitUntil: ['navigated']});
-  }
-
-  const {warnings} = await prepare.prepareTargetForIndividualNavigation(
-    driver.defaultSession,
-    config.settings,
-    {
-      ...navigation,
-      requestor,
-    }
-  );
-
-  return {warnings};
 }
 
 /**
@@ -91,23 +76,25 @@ async function _cleanupNavigation({driver}) {
 
 /**
  * @param {NavigationContext} navigationContext
- * @return {Promise<{requestedUrl: string, mainDocumentUrl: string, navigationError: LH.LighthouseError | undefined, warnings: Array<LH.IcuMessage>}>}
+ * @return {Promise<{requestedUrl: string, mainDocumentUrl: string, navigationError: LH.LighthouseError | undefined}>}
  */
 async function _navigate(navigationContext) {
-  const {driver, config, requestor} = navigationContext;
+  const {driver, resolvedConfig, requestor} = navigationContext;
 
   try {
     const {requestedUrl, mainDocumentUrl, warnings} = await gotoURL(driver, requestor, {
-      ...navigationContext.navigation,
-      debugNavigation: config.settings.debugNavigation,
-      maxWaitForFcp: config.settings.maxWaitForFcp,
-      maxWaitForLoad: config.settings.maxWaitForLoad,
-      waitUntil: navigationContext.navigation.pauseAfterFcpMs ? ['fcp', 'load'] : ['load'],
+      ...resolvedConfig.settings,
+      waitUntil: resolvedConfig.settings.pauseAfterFcpMs ? ['fcp', 'load'] : ['load'],
     });
-    return {requestedUrl, mainDocumentUrl, navigationError: undefined, warnings};
+
+    navigationContext.baseArtifacts.LighthouseRunWarnings.push(...warnings);
+
+    return {requestedUrl, mainDocumentUrl, navigationError: undefined};
   } catch (err) {
     if (!(err instanceof LighthouseError)) throw err;
-    if (err.code !== 'NO_FCP' && err.code !== 'PAGE_HUNG') throw err;
+    if (err.code !== 'NO_FCP' && err.code !== 'PAGE_HUNG' && err.code !== 'TARGET_CRASHED') {
+      throw err;
+    }
     if (typeof requestor !== 'string') throw err;
 
     // TODO: Make the urls optional here so we don't need to throw an error with a callback requestor.
@@ -115,7 +102,6 @@ async function _navigate(navigationContext) {
       requestedUrl: requestor,
       mainDocumentUrl: requestor,
       navigationError: err,
-      warnings: [],
     };
   }
 }
@@ -126,31 +112,19 @@ async function _navigate(navigationContext) {
  * @return {Promise<{devtoolsLog?: LH.DevtoolsLog, records?: Array<LH.Artifacts.NetworkRequest>, trace?: LH.Trace}>}
  */
 async function _collectDebugData(navigationContext, phaseState) {
-  const devtoolsLogArtifactDefn = phaseState.artifactDefinitions.find(
-    definition => definition.gatherer.instance.meta.symbol === DevtoolsLog.symbol
-  );
-  const traceArtifactDefn = phaseState.artifactDefinitions.find(
-    definition => definition.gatherer.instance.meta.symbol === Trace.symbol
-  );
+  let devtoolsLog;
+  let trace;
 
-  const artifactDefinitions = [devtoolsLogArtifactDefn, traceArtifactDefn].filter(
-    /**
-     * @param {LH.Config.AnyArtifactDefn | undefined} defn
-     * @return {defn is LH.Config.AnyArtifactDefn}
-     */
-    defn => Boolean(defn)
-  );
-  if (!artifactDefinitions.length) return {};
+  for (const definition of phaseState.artifactDefinitions) {
+    const {instance} = definition.gatherer;
+    if (instance instanceof DevtoolsLog) {
+      devtoolsLog = instance.getDebugData();
+    } else if (instance instanceof Trace) {
+      trace = instance.getDebugData();
+    }
+  }
 
-  await collectPhaseArtifacts({...phaseState, phase: 'getArtifact', artifactDefinitions});
-  const getArtifactState = phaseState.artifactState.getArtifact;
-
-  const devtoolsLogArtifactId = devtoolsLogArtifactDefn?.id;
-  const devtoolsLog = devtoolsLogArtifactId && (await getArtifactState[devtoolsLogArtifactId]);
   const records = devtoolsLog && (await NetworkRecords.request(devtoolsLog, navigationContext));
-
-  const traceArtifactId = traceArtifactDefn?.id;
-  const trace = traceArtifactId && (await getArtifactState[traceArtifactId]);
 
   return {devtoolsLog, records, trace};
 }
@@ -158,53 +132,50 @@ async function _collectDebugData(navigationContext, phaseState) {
 /**
  * @param {NavigationContext} navigationContext
  * @param {PhaseState} phaseState
- * @param {Awaited<ReturnType<typeof _setupNavigation>>} setupResult
  * @param {Awaited<ReturnType<typeof _navigate>>} navigateResult
- * @return {Promise<{artifacts: Partial<LH.GathererArtifacts>, warnings: Array<LH.IcuMessage>, pageLoadError: LH.LighthouseError | undefined}>}
+ * @return {Promise<Partial<LH.GathererArtifacts>>}
  */
 async function _computeNavigationResult(
   navigationContext,
   phaseState,
-  setupResult,
   navigateResult
 ) {
-  const {navigationError, mainDocumentUrl} = navigateResult;
-  const warnings = [...setupResult.warnings, ...navigateResult.warnings];
+  const {navigationError, requestedUrl, mainDocumentUrl} = navigateResult;
   const debugData = await _collectDebugData(navigationContext, phaseState);
   const pageLoadError = debugData.records
     ? getPageLoadError(navigationError, {
       url: mainDocumentUrl,
-      loadFailureMode: navigationContext.navigation.loadFailureMode,
+      ignoreStatusCode: navigationContext.resolvedConfig.settings.ignoreStatusCode,
       networkRecords: debugData.records,
-      warnings,
+      warnings: navigationContext.baseArtifacts.LighthouseRunWarnings,
     })
     : navigationError;
 
   if (pageLoadError) {
-    const locale = navigationContext.config.settings.locale;
+    const locale = navigationContext.resolvedConfig.settings.locale;
     const localizedMessage = format.getFormatted(pageLoadError.friendlyMessage, locale);
-    log.error('NavigationRunner', localizedMessage, navigateResult.requestedUrl);
+    log.error('NavigationRunner', localizedMessage, requestedUrl);
 
     /** @type {Partial<LH.GathererArtifacts>} */
     const artifacts = {};
-    const pageLoadErrorId = `pageLoadError-${navigationContext.navigation.id}`;
-    if (debugData.devtoolsLog) artifacts.devtoolsLogs = {[pageLoadErrorId]: debugData.devtoolsLog};
-    if (debugData.trace) artifacts.traces = {[pageLoadErrorId]: debugData.trace};
+    const pageLoadErrorId = 'pageLoadError-defaultPass';
+    if (debugData.devtoolsLog) {
+      artifacts.DevtoolsLogError = debugData.devtoolsLog;
+      artifacts.devtoolsLogs = {[pageLoadErrorId]: debugData.devtoolsLog};
+    }
+    if (debugData.trace) {
+      artifacts.TraceError = debugData.trace;
+      artifacts.traces = {[pageLoadErrorId]: debugData.trace};
+    }
 
-    return {
-      pageLoadError,
-      artifacts,
-      warnings: [...warnings, pageLoadError.friendlyMessage],
-    };
+    navigationContext.baseArtifacts.LighthouseRunWarnings.push(pageLoadError.friendlyMessage);
+    navigationContext.baseArtifacts.PageLoadError = pageLoadError;
+
+    return artifacts;
   } else {
     await collectPhaseArtifacts({phase: 'getArtifact', ...phaseState});
 
-    const artifacts = await awaitArtifacts(phaseState.artifactState);
-    return {
-      artifacts,
-      warnings,
-      pageLoadError: undefined,
-    };
+    return await awaitArtifacts(phaseState.artifactState);
   }
 }
 
@@ -213,145 +184,133 @@ async function _computeNavigationResult(
  * @return {ReturnType<typeof _computeNavigationResult>}
  */
 async function _navigation(navigationContext) {
+  if (!navigationContext.resolvedConfig.artifacts) {
+    throw new Error('No artifacts were defined on the config');
+  }
+
   const artifactState = getEmptyArtifactState();
-  const initialUrl = await navigationContext.driver.url();
   const phaseState = {
-    url: initialUrl,
+    url: await navigationContext.driver.url(),
     gatherMode: /** @type {const} */ ('navigation'),
     driver: navigationContext.driver,
     page: navigationContext.page,
     computedCache: navigationContext.computedCache,
-    artifactDefinitions: navigationContext.navigation.artifacts,
+    artifactDefinitions: navigationContext.resolvedConfig.artifacts,
     artifactState,
     baseArtifacts: navigationContext.baseArtifacts,
-    settings: navigationContext.config.settings,
+    settings: navigationContext.resolvedConfig.settings,
   };
 
-  const setupResult = await _setupNavigation(navigationContext);
+  const disableAsyncStacks =
+    await prepare.enableAsyncStacks(navigationContext.driver.defaultSession);
+
   await collectPhaseArtifacts({phase: 'startInstrumentation', ...phaseState});
   await collectPhaseArtifacts({phase: 'startSensitiveInstrumentation', ...phaseState});
   const navigateResult = await _navigate(navigationContext);
 
   // Every required url is initialized to an empty string in `getBaseArtifacts`.
   // If we haven't set all the required urls yet, set them here.
-  if (!Object.values(phaseState.baseArtifacts).every(Boolean)) {
+  if (!Object.values(phaseState.baseArtifacts.URL).every(Boolean)) {
     phaseState.baseArtifacts.URL = {
-      initialUrl,
       requestedUrl: navigateResult.requestedUrl,
       mainDocumentUrl: navigateResult.mainDocumentUrl,
-      finalUrl: navigateResult.mainDocumentUrl,
+      finalDisplayedUrl: await navigationContext.driver.url(),
     };
   }
   phaseState.url = navigateResult.mainDocumentUrl;
 
   await collectPhaseArtifacts({phase: 'stopSensitiveInstrumentation', ...phaseState});
   await collectPhaseArtifacts({phase: 'stopInstrumentation', ...phaseState});
+
+  // bf-cache-failures can emit `Page.frameNavigated` at the end of the run.
+  // This can cause us to issue protocol commands after the target closes.
+  // We should disable our `Page.frameNavigated` handlers before that.
+  await disableAsyncStacks();
+
   await _cleanupNavigation(navigationContext);
 
-  return _computeNavigationResult(navigationContext, phaseState, setupResult, navigateResult);
+  return _computeNavigationResult(navigationContext, phaseState, navigateResult);
 }
 
 /**
- * @param {{driver: Driver, page: LH.Puppeteer.Page, config: LH.Config.FRConfig, requestor: LH.NavigationRequestor; baseArtifacts: LH.FRBaseArtifacts, computedCache: NavigationContext['computedCache']}} args
- * @return {Promise<{artifacts: Partial<LH.FRArtifacts & LH.FRBaseArtifacts>}>}
+ * @param {{requestedUrl?: string, driver: Driver, resolvedConfig: LH.Config.ResolvedConfig, lhBrowser?: LH.Puppeteer.Browser, lhPage?: LH.Puppeteer.Page}} args
  */
-async function _navigations({driver, page, config, requestor, baseArtifacts, computedCache}) {
-  if (!config.navigations) throw new Error('No navigations configured');
-
-  /** @type {Partial<LH.FRArtifacts & LH.FRBaseArtifacts>} */
-  const artifacts = {};
-  /** @type {Array<LH.IcuMessage>} */
-  const LighthouseRunWarnings = [];
-
-  for (const navigation of config.navigations) {
-    const navigationContext = {
-      driver,
-      page,
-      navigation,
-      requestor,
-      config,
-      baseArtifacts,
-      computedCache,
-    };
-
-    let shouldHaltNavigations = false;
-    const navigationResult = await _navigation(navigationContext);
-    if (navigation.loadFailureMode === 'fatal') {
-      if (navigationResult.pageLoadError) {
-        artifacts.PageLoadError = navigationResult.pageLoadError;
-        shouldHaltNavigations = true;
-      }
-    }
-
-    LighthouseRunWarnings.push(...navigationResult.warnings);
-    Object.assign(artifacts, navigationResult.artifacts);
-    if (shouldHaltNavigations) break;
+async function _cleanup({requestedUrl, driver, resolvedConfig, lhBrowser, lhPage}) {
+  const didResetStorage = !resolvedConfig.settings.disableStorageReset && requestedUrl;
+  if (didResetStorage) {
+    await storage.clearDataForOrigin(driver.defaultSession,
+    requestedUrl,
+    resolvedConfig.settings.clearStorageTypes
+    );
   }
 
-  return {artifacts: {...artifacts, LighthouseRunWarnings}};
-}
-
-/**
- * @param {{requestedUrl?: string, driver: Driver, config: LH.Config.FRConfig}} args
- */
-async function _cleanup({requestedUrl, driver, config}) {
-  const didResetStorage = !config.settings.disableStorageReset && requestedUrl;
-  if (didResetStorage) await storage.clearDataForOrigin(driver.defaultSession, requestedUrl);
-
   await driver.disconnect();
+
+  // If Lighthouse started the Puppeteer instance then we are responsible for closing it.
+  await lhPage?.close();
+  await lhBrowser?.disconnect();
 }
 
 /**
+ * @param {LH.Puppeteer.Page|undefined} page
  * @param {LH.NavigationRequestor|undefined} requestor
- * @param {{page?: LH.Puppeteer.Page, config?: LH.Config.Json, flags?: LH.Flags}} options
- * @return {Promise<LH.Gatherer.FRGatherResult>}
+ * @param {{config?: LH.Config, flags?: LH.Flags}} [options]
+ * @return {Promise<LH.Gatherer.GatherResult>}
  */
-async function navigationGather(requestor, options) {
-  const {flags = {}} = options;
+async function navigationGather(page, requestor, options = {}) {
+  const {flags = {}, config} = options;
   log.setLevel(flags.logLevel || 'error');
 
-  const {config} = await initializeConfig('navigation', options.config, flags);
+  const {resolvedConfig} = await initializeConfig('navigation', config, flags);
   const computedCache = new Map();
 
   const isCallback = typeof requestor === 'function';
 
-  const runnerOptions = {config, computedCache};
-  const artifacts = await Runner.gather(
-    async () => {
-      let {page} = options;
-      const normalizedRequestor = isCallback ? requestor : UrlUtils.normalizeUrl(requestor);
+  const runnerOptions = {resolvedConfig, computedCache};
 
-      // For navigation mode, we shouldn't connect to a browser in audit mode,
-      // therefore we connect to the browser in the gatherFn callback.
-      if (!page) {
-        const {hostname = DEFAULT_HOSTNAME, port = DEFAULT_PORT} = flags;
-        const browser = await puppeteer.connect({browserURL: `http://${hostname}:${port}`});
-        page = await browser.newPage();
-      }
+  const gatherFn = async () => {
+    const normalizedRequestor = isCallback ? requestor : UrlUtils.normalizeUrl(requestor);
 
-      const driver = new Driver(page);
-      const context = {
-        driver,
-        config,
-        requestor: normalizedRequestor,
-      };
-      const {baseArtifacts} = await _setup(context);
-      const {artifacts} = await _navigations({...context, page, baseArtifacts, computedCache});
-      await _cleanup(context);
+    /** @type {LH.Puppeteer.Browser|undefined} */
+    let lhBrowser = undefined;
+    /** @type {LH.Puppeteer.Page|undefined} */
+    let lhPage = undefined;
 
-      return finalizeArtifacts(baseArtifacts, artifacts);
-    },
-    runnerOptions
-  );
+    // For navigation mode, we shouldn't connect to a browser in audit mode,
+    // therefore we connect to the browser in the gatherFn callback.
+    if (!page) {
+      const {hostname = DEFAULT_HOSTNAME, port = DEFAULT_PORT} = flags;
+      lhBrowser = await puppeteer.connect({browserURL: `http://${hostname}:${port}`, defaultViewport: null});
+      lhPage = await lhBrowser.newPage();
+      page = lhPage;
+    }
+
+    const driver = new Driver(page);
+    const context = {
+      driver,
+      lhBrowser,
+      lhPage,
+      page,
+      resolvedConfig,
+      requestor: normalizedRequestor,
+      computedCache,
+    };
+    const {baseArtifacts} = await _setup(context);
+
+    const artifacts = await _navigation({...context, baseArtifacts});
+
+    await _cleanup(context);
+
+    return finalizeArtifacts(baseArtifacts, artifacts);
+  };
+  const artifacts = await Runner.gather(gatherFn, runnerOptions);
   return {artifacts, runnerOptions};
 }
 
 export {
   navigationGather,
   _setup,
-  _setupNavigation,
   _navigate,
   _navigation,
-  _navigations,
   _cleanup,
 };

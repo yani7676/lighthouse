@@ -1,7 +1,7 @@
 /**
- * @license Copyright 2020 The Lighthouse Authors. All Rights Reserved.
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the License. You may obtain a copy of the License at http://www.apache.org/licenses/LICENSE-2.0
- * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific language governing permissions and limitations under the License.
+ * @license
+ * Copyright 2020 Google LLC
+ * SPDX-License-Identifier: Apache-2.0
  */
 
 /**
@@ -11,20 +11,20 @@
 
 /* global document */
 
-import puppeteer from 'puppeteer-core';
+import * as puppeteer from 'puppeteer-core';
 import {getChromePath} from 'chrome-launcher';
 
 import {pageFunctions} from '../lib/page-functions.js';
 
-/** @param {LH.Puppeteer.Page} page */
+/** @param {puppeteer.Page} page */
 async function runOctane(page) {
-  /** @param {LH.Puppeteer.ConsoleMessage} message */
+  /** @param {puppeteer.ConsoleMessage} message */
   const pageLogger = message => process.stdout.write(`  ${message.text()}\n`);
 
   process.stdout.write(`Running Octane...\n`);
   await page.goto('https://chromium.github.io/octane/', {waitUntil: 'networkidle0'});
   await page.waitForSelector('#run-octane');
-  await page.waitForTimeout(5000);
+  await new Promise(r => setTimeout(r, 5000));
   page.on('console', pageLogger);
   await page.click('#run-octane');
   await page.waitForFunction(() => {
@@ -43,12 +43,12 @@ async function runOctane(page) {
   page.off('console', pageLogger);
 }
 
-/** @param {LH.Puppeteer.Page} page */
+/** @param {puppeteer.Page} page */
 async function runSpeedometer(page) {
   process.stdout.write(`Running Speedometer...\n`);
   await page.goto('https://browserbench.org/Speedometer2.0/', {waitUntil: 'networkidle0'});
   await page.waitForSelector('#home button');
-  await page.waitForTimeout(5000);
+  await new Promise(r => setTimeout(r, 5000));
   await page.click('#home button');
 
   const loggerInterval = setInterval(async () => {

@@ -1,15 +1,14 @@
 /**
- * @license Copyright 2020 Google Inc. All Rights Reserved.
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the License. You may obtain a copy of the License at http://www.apache.org/licenses/LICENSE-2.0
- * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific language governing permissions and limitations under the License.
+ * @license Copyright 2020 Google LLC
+ * SPDX-License-Identifier: Apache-2.0
  */
 
 import jsdom from 'jsdom';
 
 import {ElementScreenshotRenderer} from '../../renderer/element-screenshot-renderer.js';
-import {Util} from '../../renderer/util.js';
-import {I18n} from '../../renderer/i18n.js';
+import {I18nFormatter} from '../../renderer/i18n-formatter.js';
 import {DOM} from '../../renderer/dom.js';
+import {Globals} from '../../renderer/report-globals.js';
 
 /**
  * @param {{left: number, top: number, width: number, height:number}} opts
@@ -27,15 +26,19 @@ describe('ElementScreenshotRenderer', () => {
   let dom;
 
   before(() => {
-    Util.i18n = new I18n('en', {...Util.UIStrings});
+    Globals.apply({
+      providedStrings: {},
+      i18n: new I18nFormatter('en'),
+      reportJson: null,
+    });
 
     const {document} = new jsdom.JSDOM().window;
     dom = new DOM(document);
-    Util.resetUniqueSuffix();
+    Globals.resetUniqueSuffix();
   });
 
   after(() => {
-    Util.i18n = undefined;
+    Globals.i18n = undefined;
   });
 
   it('renders screenshot', () => {

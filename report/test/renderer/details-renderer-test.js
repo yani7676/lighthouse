@@ -1,17 +1,18 @@
 /**
- * @license Copyright 2017 The Lighthouse Authors. All Rights Reserved.
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the License. You may obtain a copy of the License at http://www.apache.org/licenses/LICENSE-2.0
- * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific language governing permissions and limitations under the License.
+ * @license
+ * Copyright 2017 Google LLC
+ * SPDX-License-Identifier: Apache-2.0
  */
 
-import {strict as assert} from 'assert';
+import assert from 'assert/strict';
 
 import jsdom from 'jsdom';
+import jestMock from 'jest-mock';
 
 import {DOM} from '../../renderer/dom.js';
-import {Util} from '../../renderer/util.js';
-import {I18n} from '../../renderer/i18n.js';
+import {I18nFormatter} from '../../renderer/i18n-formatter.js';
 import {DetailsRenderer} from '../../renderer/details-renderer.js';
+import {Globals} from '../../renderer/report-globals.js';
 
 describe('DetailsRenderer', () => {
   let renderer;
@@ -23,12 +24,16 @@ describe('DetailsRenderer', () => {
   }
 
   before(() => {
-    Util.i18n = new I18n('en', {...Util.UIStrings});
+    Globals.apply({
+      providedStrings: {},
+      i18n: new I18nFormatter('en'),
+      reportJson: null,
+    });
     createRenderer();
   });
 
   after(() => {
-    Util.i18n = undefined;
+    Globals.i18n = undefined;
   });
 
   describe('render', () => {
@@ -57,9 +62,9 @@ describe('DetailsRenderer', () => {
       const el = renderer.render({
         type: 'table',
         headings: [
-          {text: 'First', key: 'a', itemType: 'text'},
-          {text: 'Second', key: 'b', itemType: 'text'},
-          {text: 'Preview', key: 'c', itemType: 'thumbnail'},
+          {text: 'First', key: 'a', valueType: 'text'},
+          {text: 'Second', key: 'b', valueType: 'text'},
+          {text: 'Preview', key: 'c', valueType: 'thumbnail'},
         ],
         items: [
           {
@@ -88,11 +93,11 @@ describe('DetailsRenderer', () => {
       const el = renderer.render({
         type: 'table',
         headings: [
-          {text: '', key: 'bytes', itemType: 'bytes'},
-          {text: '', key: 'numeric', itemType: 'numeric'},
-          {text: '', key: 'ms', itemType: 'ms'},
+          {text: '', key: 'bytes', valueType: 'bytes'},
+          {text: '', key: 'numeric', valueType: 'numeric'},
+          {text: '', key: 'ms', valueType: 'ms'},
           // Verify that 0 is ignored.
-          {text: '', key: 'ms', itemType: 'ms', granularity: 0},
+          {text: '', key: 'ms', valueType: 'ms', granularity: 0},
         ],
         items: [
           {
@@ -114,9 +119,9 @@ describe('DetailsRenderer', () => {
       const el = renderer.render({
         type: 'table',
         headings: [
-          {text: '', key: 'bytes', itemType: 'bytes', granularity: 0.01},
-          {text: '', key: 'numeric', itemType: 'numeric', granularity: 100},
-          {text: '', key: 'ms', itemType: 'ms', granularity: 1},
+          {text: '', key: 'bytes', valueType: 'bytes', granularity: 0.01},
+          {text: '', key: 'numeric', valueType: 'numeric', granularity: 100},
+          {text: '', key: 'ms', valueType: 'ms', granularity: 1},
         ],
         items: [
           {
@@ -190,7 +195,7 @@ describe('DetailsRenderer', () => {
     it('renders lists', () => {
       const table = {
         type: 'table',
-        headings: [{text: '', key: 'numeric', itemType: 'numeric'}],
+        headings: [{text: '', key: 'numeric', valueType: 'numeric'}],
         items: [{numeric: 1234.567}],
       };
 
@@ -264,7 +269,7 @@ describe('DetailsRenderer', () => {
     it('renders text values', () => {
       const details = {
         type: 'table',
-        headings: [{key: 'content', itemType: 'text', text: 'Heading'}],
+        headings: [{key: 'content', valueType: 'text', label: 'Heading'}],
         items: [{content: 'My text content'}],
       };
 
@@ -277,7 +282,7 @@ describe('DetailsRenderer', () => {
     it('renders not much if items are empty', () => {
       const details = {
         type: 'table',
-        headings: [{key: 'content', itemType: 'text', text: 'Heading'}],
+        headings: [{key: 'content', valueType: 'text', label: 'Heading'}],
         items: [],
       };
 
@@ -288,7 +293,7 @@ describe('DetailsRenderer', () => {
     it('renders an empty cell if item is missing a property', () => {
       const details = {
         type: 'table',
-        headings: [{key: 'content', itemType: 'text', text: 'Heading'}],
+        headings: [{key: 'content', valueType: 'text', label: 'Heading'}],
         items: [
           {},
           {content: undefined},
@@ -316,7 +321,7 @@ describe('DetailsRenderer', () => {
     it('renders code values from a string', () => {
       const details = {
         type: 'table',
-        headings: [{key: 'content', itemType: 'code', text: 'Heading'}],
+        headings: [{key: 'content', valueType: 'code', label: 'Heading'}],
         items: [{content: 'code snippet'}],
       };
 
@@ -334,7 +339,7 @@ describe('DetailsRenderer', () => {
 
       const details = {
         type: 'table',
-        headings: [{key: 'content', itemType: 'code', text: 'Heading'}],
+        headings: [{key: 'content', valueType: 'code', label: 'Heading'}],
         items: [{content: code}],
       };
 
@@ -347,7 +352,7 @@ describe('DetailsRenderer', () => {
     it('renders thumbnail values', () => {
       const details = {
         type: 'table',
-        headings: [{key: 'content', itemType: 'thumbnail', text: 'Heading'}],
+        headings: [{key: 'content', valueType: 'thumbnail', label: 'Heading'}],
         items: [{content: 'http://example.com/my-image.jpg'}],
       };
 
@@ -369,7 +374,7 @@ describe('DetailsRenderer', () => {
       };
       const details = {
         type: 'table',
-        headings: [{key: 'content', itemType: 'link', text: 'Heading'}],
+        headings: [{key: 'content', valueType: 'link', label: 'Heading'}],
         items: [{content: link}],
       };
 
@@ -391,7 +396,7 @@ describe('DetailsRenderer', () => {
       };
       const details = {
         type: 'table',
-        headings: [{key: 'content', itemType: 'link', text: 'Heading'}],
+        headings: [{key: 'content', valueType: 'link', label: 'Heading'}],
         items: [{content: link}],
       };
 
@@ -411,7 +416,7 @@ describe('DetailsRenderer', () => {
       };
       const details = {
         type: 'table',
-        headings: [{key: 'content', itemType: 'link', text: 'Heading'}],
+        headings: [{key: 'content', valueType: 'link', label: 'Heading'}],
         items: [{content: link}],
       };
 
@@ -431,7 +436,7 @@ describe('DetailsRenderer', () => {
         };
         const details = {
           type: 'table',
-          headings: [{key: 'content', itemType: 'node', text: 'Heading'}],
+          headings: [{key: 'content', valueType: 'node', label: 'Heading'}],
           items: [{content: node}],
         };
 
@@ -466,7 +471,7 @@ describe('DetailsRenderer', () => {
         };
         const details = {
           type: 'table',
-          headings: [{key: 'content', itemType: 'node', text: 'Heading'}],
+          headings: [{key: 'content', valueType: 'node', label: 'Heading'}],
           items: [{content: node}],
         };
 
@@ -498,7 +503,7 @@ describe('DetailsRenderer', () => {
         };
         const details = {
           type: 'table',
-          headings: [{key: 'content', itemType: 'node', text: 'Heading'}],
+          headings: [{key: 'content', valueType: 'node', label: 'Heading'}],
           items: [{content: node}],
         };
 
@@ -508,6 +513,256 @@ describe('DetailsRenderer', () => {
         expect(screenshotEl).toBeNull();
       });
     });
+
+    ['table', 'opportunity'].forEach(tableType =>
+      describe(`entity grouped ${tableType}`, () => {
+        let _console;
+        before(() => {
+          createRenderer({
+            entities: [
+              {name: 'example.com', category: 'Cat', isFirstParty: true},
+              {name: 'cdn.com', category: 'CDN'},
+              {name: 'Sample Chrome Extension', category: 'Chrome Extension',
+                origins: ['chrome-extension://abcdefghijklmnopqrstuvwxyz']},
+            ],
+          });
+
+          _console = global.console.warn;
+          global.console.warn = jestMock.fn();
+        });
+
+        after(() => {
+          global.console.warn = _console;
+        });
+
+        it(`renders ${tableType} grouped with entities provided and items marked`, () => {
+          const el = renderer.render({
+            type: tableType,
+            headings: [
+              {key: 'url', valueType: 'url', label: 'URL'},
+              {key: 'totalBytes', valueType: 'bytes', label: 'Size (KiB)'},
+              {key: 'wastedBytes', valueType: 'bytes', label: 'Potential Savings (KiB)'},
+            ],
+            items: [
+              {url: 'https://example.com/1', totalBytes: 100, wastedBytes: 500, entity: 'example.com'},
+              {url: 'https://example.com/2', totalBytes: 200, wastedBytes: 600, entity: 'example.com'},
+              {url: 'https://cdn.com/1', totalBytes: 300, wastedBytes: 700, entity: 'cdn.com'},
+              {url: 'https://cdn.com/2', totalBytes: 400, wastedBytes: 800, entity: 'cdn.com'},
+              {url: 'https://unattributable.com/1', totalBytes: 300, wastedBytes: 700}, // entity not marked.
+              {url: 'Unattributable', totalBytes: 500, wastedBytes: 500}, // entity not marked.
+            ],
+          });
+
+          assert.equal(el.querySelectorAll('tr').length, 10, `did not render ${tableType} rows`);
+          assert.equal(el.querySelectorAll('.lh-row--group').length, 3,
+            'did not render all entity grouped rows');
+          assert.deepStrictEqual(
+            [...el.querySelectorAll('.lh-row--group')[0].children].map(td => td.textContent),
+            ['example.com Cat 1st party', '0.3 KiB', '1.1 KiB'],
+            'did not render 1st party grouped row correctly'
+          );
+          assert.deepStrictEqual(
+            [...el.querySelectorAll('.lh-row--group')[1].children].map(td => td.textContent),
+            ['cdn.com CDN', '0.7 KiB', '1.5 KiB'],
+            'did not render CDN category row correctly'
+          );
+          assert.deepStrictEqual(
+            [...el.querySelectorAll('.lh-row--group')[2].children].map(td => td.textContent),
+            ['Unattributable', '0.8 KiB', '1.2 KiB'],
+            'did not render all Unattributable row'
+          );
+        });
+
+        it(`marks chrome:// and chrome-extension:// urls as unattributable`, () => {
+          const el = renderer.render({
+            type: tableType,
+            headings: [
+              {key: 'url', valueType: 'url', label: 'URL'},
+              {key: 'totalBytes', valueType: 'bytes', label: 'Size (KiB)'},
+              {key: 'wastedBytes', valueType: 'bytes', label: 'Potential Savings (KiB)'},
+            ],
+            items: [
+              {url: 'https://example.com/1', totalBytes: 100, wastedBytes: 500, entity: 'example.com'},
+              {url: 'https://cdn.com/1', totalBytes: 300, wastedBytes: 700, entity: 'cdn.com'},
+              {url: 'https://cdn.com/2', totalBytes: 400, wastedBytes: 800, entity: 'cdn.com'},
+              {url: 'chrome-extension://abcdefghijklmnopqrstuvwxyz/foo/bar.js', totalBytes: 300, wastedBytes: 700, entity: 'Sample Chrome Extension'},
+              {url: 'chrome://new-tab-page', totalBytes: 300, wastedBytes: 700},
+              {url: 'Unattributable', totalBytes: 500, wastedBytes: 500}, // entity not marked.
+            ],
+          });
+
+          assert.deepStrictEqual(
+            [...el.querySelectorAll('.lh-row--group')[0].children].map(td => td.textContent),
+            ['example.com Cat 1st party', '0.1 KiB', '0.5 KiB'],
+            'did not render 1st party grouped row correctly'
+          );
+          assert.deepStrictEqual(
+            [...el.querySelectorAll('.lh-row--group')[1].children].map(td => td.textContent),
+            ['cdn.com CDN', '0.7 KiB', '1.5 KiB'],
+            'did not render CDN category row correctly'
+          );
+          assert.deepStrictEqual(
+            [...el.querySelectorAll('.lh-row--group')[2].children].map(td => td.textContent),
+            ['Sample Chrome Extension Chrome Extension', '0.3 KiB', '0.7 KiB'],
+            'did not render Chrome Extensions row'
+          );
+          assert.deepStrictEqual(
+            [...el.querySelectorAll('.lh-row--group')[3].children].map(td => td.textContent),
+            ['Unattributable', '0.8 KiB', '1.2 KiB'],
+            'did not render all Unattributable row'
+          );
+          assert.equal(el.querySelectorAll('tr').length, 11, `did not render ${tableType} rows`);
+        });
+
+        it('does not group if entity classification is absent', () => {
+          const el = renderer.render({
+            type: tableType,
+            headings: [
+              {key: 'url', valueType: 'url', label: 'URL'},
+              {key: 'totalBytes', valueType: 'bytes', label: 'Size (KiB)'},
+              {key: 'wastedBytes', valueType: 'bytes', label: 'Potential Savings (KiB)'},
+            ],
+            items: [
+              {url: 'https://example.com/1', totalBytes: 100, wastedBytes: 500},
+              {url: 'https://example.com/2', totalBytes: 200, wastedBytes: 600},
+              {url: 'https://cdn.com/1', totalBytes: 300, wastedBytes: 700},
+              {url: 'https://cdn.com/2', totalBytes: 400, wastedBytes: 800},
+              {url: 'https://unattributable.com/1', totalBytes: 300, wastedBytes: 700},
+              {url: 'Unattributable', totalBytes: 500, wastedBytes: 500},
+            ],
+          });
+
+          assert.equal(el.querySelectorAll('tr').length, 7, `did not render ${tableType} rows`);
+          assert.equal(el.querySelectorAll('.lh-row--group').length, 0,
+            'rendered entity grouped rows without entity classification');
+        });
+
+        it('does not group again if audit is already grouped by entity', () => {
+          const el = renderer.render({
+            type: tableType,
+            isEntityGrouped: true,
+            headings: [
+              {key: 'url', valueType: 'url', label: 'URL'},
+              {key: 'totalBytes', valueType: 'bytes', label: 'Size (KiB)'},
+              {key: 'wastedBytes', valueType: 'bytes', label: 'Potential Savings (KiB)'},
+            ],
+            items: [
+              {url: 'https://example.com/1', totalBytes: 100, wastedBytes: 500, entity: 'example.com'},
+              {url: 'https://example.com/2', totalBytes: 200, wastedBytes: 600},
+              {url: 'https://cdn.com/1', totalBytes: 300, wastedBytes: 700},
+              {url: 'https://cdn.com/2', totalBytes: 400, wastedBytes: 800},
+              {url: 'https://unattributable.com/1', totalBytes: 300, wastedBytes: 700},
+              {url: 'Unattributable', totalBytes: 500, wastedBytes: 500},
+            ],
+          });
+
+          assert.equal(el.querySelectorAll('tr').length, 7, `did not render ${tableType} rows`);
+          assert.equal(el.querySelectorAll('.lh-row--group').length, 1,
+            'did not style entity classified row as a grouped row');
+        });
+
+        it('throws a warning for unsupported types being sorted', () => {
+          renderer.render({
+            type: tableType,
+            sortedBy: ['totalBytes'],
+            headings: [
+              {key: 'url', valueType: 'url', label: 'URL'},
+              {key: 'totalBytes', valueType: 'text', label: 'Size (KiB)'},
+              {key: 'wastedBytes', valueType: 'bytes', label: 'Potential Savings (KiB)'},
+            ],
+            items: [
+              {url: 'https://example.com/1',
+                totalBytes: {type: 'link', text: 'linkText', url: 'linkUrl'},
+                wastedBytes: 500, entity: 'example.com'},
+              {url: 'Unattributable', totalBytes: true, wastedBytes: 500},
+              {url: 'https://cdn.com/2', totalBytes: 400, wastedBytes: 800, entity: 'cdn.com'},
+            ],
+          });
+
+          expect(global.console.warn).toHaveBeenCalled();
+        });
+
+        it('skips summing on skipSumming columns', () => {
+          const el = renderer.render({
+            type: tableType,
+            skipSumming: ['totalBytes', 'wastedBytes'],
+            headings: [
+              {key: 'url', valueType: 'url', label: 'URL'},
+              {key: 'totalBytes', valueType: 'bytes', label: 'Size (KiB)'},
+              {key: 'wastedBytes', valueType: 'bytes', label: 'Potential Savings (KiB)'},
+            ],
+            items: [
+              {url: 'https://example.com/1', totalBytes: 100, wastedBytes: 500, entity: 'example.com'},
+              {url: 'https://example.com/2', totalBytes: 200, wastedBytes: 600, entity: 'example.com'},
+              {url: 'https://cdn.com/1', totalBytes: 300, wastedBytes: 700, entity: 'cdn.com'},
+              {url: 'https://cdn.com/2', totalBytes: 400, wastedBytes: 800, entity: 'cdn.com'},
+              {url: 'https://unattributable.com/1', totalBytes: 300, wastedBytes: 700}, // entity not marked.
+              {url: 'Unattributable', totalBytes: 500, wastedBytes: 500}, // entity not marked.
+            ],
+          });
+
+          assert.equal(el.querySelectorAll('tr').length, 10, `did not render ${tableType} rows`);
+          assert.equal(el.querySelectorAll('.lh-row--group').length, 3,
+            'did not style entity classified row as a grouped row');
+          assert.deepStrictEqual(
+            [...el.querySelectorAll('.lh-row--group')[0].children].map(td => td.textContent),
+            ['example.com Cat 1st party', '', ''],
+            'did not render 1st party grouped row correctly'
+          );
+          assert.deepStrictEqual(
+            [...el.querySelectorAll('.lh-row--group')[1].children].map(td => td.textContent),
+            ['cdn.com CDN', '', ''],
+            'did not render CDN category row correctly'
+          );
+          assert.deepStrictEqual(
+            [...el.querySelectorAll('.lh-row--group')[2].children].map(td => td.textContent),
+            ['Unattributable', '', ''],
+            'did not render all Unattributable row'
+          );
+        });
+
+        it(`sorts grouped ${tableType} rows`, () => {
+          const el = renderer.render({
+            type: tableType,
+            sortedBy: ['totalBytes', 'url'],
+            headings: [
+              {key: 'url', valueType: 'url', label: 'URL'},
+              {key: 'totalBytes', valueType: 'bytes', label: 'Size (KiB)'},
+              {key: 'wastedBytes', valueType: 'bytes', label: 'Potential Savings (KiB)'},
+            ],
+            items: [
+              {url: 'https://example.com/1', totalBytes: 100, wastedBytes: 500, entity: 'example.com'},
+              {url: 'https://example.com/2', totalBytes: 200, wastedBytes: 600, entity: 'example.com'},
+              {url: 'https://unattributable.com/1', totalBytes: 300, wastedBytes: 700}, // entity not marked.
+              {url: 'Unattributable', totalBytes: 400, wastedBytes: 500}, // entity not marked.
+              {url: 'https://cdn.com/1', totalBytes: 300, wastedBytes: 700, entity: 'cdn.com'},
+              {url: 'https://cdn.com/2', totalBytes: 400, wastedBytes: 800, entity: 'cdn.com'},
+            ],
+          });
+
+          assert.equal(el.querySelectorAll('tr').length, 10, `did not render ${tableType} rows`);
+          assert.equal(el.querySelectorAll('.lh-row--group').length, 3,
+            'did not render all entity grouped rows');
+
+          // We expect grouped rows should be sorted by totalBytes desc first, and by url asc.
+          assert.deepStrictEqual(
+            [...el.querySelectorAll('.lh-row--group')[0].children].map(td => td.textContent),
+            ['cdn.com CDN', '0.7 KiB', '1.5 KiB'],
+            'did not render CDN category row correctly'
+          );
+          assert.deepStrictEqual(
+            [...el.querySelectorAll('.lh-row--group')[1].children].map(td => td.textContent),
+            ['Unattributable', '0.7 KiB', '1.2 KiB'],
+            'did not render all Unattributable row'
+          );
+          assert.deepStrictEqual(
+            [...el.querySelectorAll('.lh-row--group')[2].children].map(td => td.textContent),
+            ['example.com Cat 1st party', '0.3 KiB', '1.1 KiB'],
+            'did not render 1st party grouped row correctly'
+          );
+        });
+      })
+    );
 
     it('renders source-location values', () => {
       const sourceLocation = {
@@ -519,7 +774,7 @@ describe('DetailsRenderer', () => {
       };
       const details = {
         type: 'table',
-        headings: [{key: 'content', itemType: 'source-location', text: 'Heading'}],
+        headings: [{key: 'content', valueType: 'source-location', label: 'Heading'}],
         items: [{content: sourceLocation}],
       };
 
@@ -549,7 +804,7 @@ describe('DetailsRenderer', () => {
       };
       const details = {
         type: 'table',
-        headings: [{key: 'content', itemType: 'source-location', text: 'Heading'}],
+        headings: [{key: 'content', valueType: 'source-location', label: 'Heading'}],
         items: [{content: sourceLocation}],
       };
 
@@ -575,7 +830,7 @@ describe('DetailsRenderer', () => {
       };
       const details = {
         type: 'table',
-        headings: [{key: 'content', itemType: 'source-location', text: 'Heading'}],
+        headings: [{key: 'content', valueType: 'source-location', label: 'Heading'}],
         items: [{content: sourceLocation}],
       };
 
@@ -600,7 +855,7 @@ describe('DetailsRenderer', () => {
       };
       const details = {
         type: 'table',
-        headings: [{key: 'content', itemType: 'source-location', text: 'Heading'}],
+        headings: [{key: 'content', valueType: 'source-location', label: 'Heading'}],
         items: [{content: sourceLocation}],
       };
 
@@ -625,7 +880,7 @@ describe('DetailsRenderer', () => {
       };
       const details = {
         type: 'table',
-        headings: [{key: 'content', itemType: 'source-location', text: 'Heading'}],
+        headings: [{key: 'content', valueType: 'source-location', label: 'Heading'}],
         items: [{content: sourceLocation}],
       };
 
@@ -646,7 +901,7 @@ describe('DetailsRenderer', () => {
 
       const details = {
         type: 'table',
-        headings: [{key: 'content', itemType: 'url', text: 'Heading'}],
+        headings: [{key: 'content', valueType: 'url', label: 'Heading'}],
         items: [{content: urlText}],
       };
 
@@ -673,7 +928,7 @@ describe('DetailsRenderer', () => {
 
       const details = {
         type: 'table',
-        headings: [{key: 'content', itemType: 'url', text: 'Heading'}],
+        headings: [{key: 'content', valueType: 'url', label: 'Heading'}],
         items: [{content: url}],
         overallSavingsMs: 100,
       };
@@ -693,7 +948,7 @@ describe('DetailsRenderer', () => {
 
       const details = {
         type: 'table',
-        headings: [{key: 'content', itemType: 'url', text: 'Heading'}],
+        headings: [{key: 'content', valueType: 'url', label: 'Heading'}],
         items: [{content: urlText}],
       };
 
@@ -712,11 +967,11 @@ describe('DetailsRenderer', () => {
         console.error = consoleError;
       });
 
-      it('renders an unknown heading itemType', () => {
+      it('renders an unknown heading valueType', () => {
         // Disallowed by type system, but test that we get an error message out just in case.
         const details = {
           type: 'table',
-          headings: [{key: 'content', itemType: 'notRealValueType', text: 'Heading'}],
+          headings: [{key: 'content', valueType: 'notRealValueType', label: 'Heading'}],
           items: [{content: 'some string'}],
         };
 
@@ -737,7 +992,7 @@ describe('DetailsRenderer', () => {
 
         const details = {
           type: 'table',
-          headings: [{key: 'content', itemType: 'url', text: 'Heading'}],
+          headings: [{key: 'content', valueType: 'url', label: 'Heading'}],
           items: [{content: item}],
         };
 
@@ -753,8 +1008,8 @@ describe('DetailsRenderer', () => {
     it('uses the item\'s type over the heading type', () => {
       const details = {
         type: 'table',
-        // itemType is overriden by code object
-        headings: [{key: 'content', itemType: 'url', text: 'Heading'}],
+        // valueType is overridden by code object
+        headings: [{key: 'content', valueType: 'url', label: 'Heading'}],
         items: [
           {content: {type: 'code', value: 'https://codeobject.com'}},
           {content: 'https://example.com'},
@@ -790,7 +1045,7 @@ describe('DetailsRenderer', () => {
         const details = {
           type: 'table',
           headings: [
-            {key: 'url', itemType: 'url', subItemsHeading: {key: 'source', itemType: 'code'}},
+            {key: 'url', valueType: 'url', subItemsHeading: {key: 'source', valueType: 'code'}},
           ],
           items: [
             {
@@ -832,7 +1087,7 @@ describe('DetailsRenderer', () => {
       it('renders, uses heading properties as fallback', () => {
         const details = {
           type: 'table',
-          headings: [{key: 'url', itemType: 'url', subItemsHeading: {key: 'source'}}],
+          headings: [{key: 'url', valueType: 'url', subItemsHeading: {key: 'source'}}],
           items: [
             {
               url: 'https://www.example.com',

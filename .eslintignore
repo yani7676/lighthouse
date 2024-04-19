@@ -4,7 +4,7 @@
 
 cli/test/fixtures/byte-efficiency/bundle.js
 
-/dist/**
+dist
 
 coverage/**
 
@@ -15,4 +15,7 @@ core/scripts/legacy-javascript/variants
 third-party/**
 
 # ignore d.ts files until we can properly lint them
-*.d.ts
+**/*.d.ts
+**/*.d.cts
+
+page-functions-test-case*out*.js

@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 /**
- * @license Copyright 2018 The Lighthouse Authors. All Rights Reserved.
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the License. You may obtain a copy of the License at http://www.apache.org/licenses/LICENSE-2.0
- * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific language governing permissions and limitations under the License.
+ * @license
+ * Copyright 2018 Google LLC
+ * SPDX-License-Identifier: Apache-2.0
  */
 
 /* eslint-disable no-console, max-len */
@@ -14,15 +14,17 @@ import {pathToFileURL} from 'url';
 import glob from 'glob';
 import {expect} from 'expect';
 import tsc from 'typescript';
-import MessageParser from 'intl-messageformat-parser';
+import MessageParser from '@formatjs/icu-messageformat-parser';
 import esMain from 'es-main';
+import isDeepEqual from 'lodash/isEqual.js';
 
-import {Util} from '../../util.cjs';
+import {Util} from '../../../shared/util.js';
 import {collectAndBakeCtcStrings} from './bake-ctc-to-lhl.js';
 import {pruneObsoleteLhlMessages} from './prune-obsolete-lhl-messages.js';
 import {countTranslatedMessages} from './count-translated.js';
-import {LH_ROOT} from '../../../root.js';
-import {resolveModulePath} from '../../../esm-utils.js';
+import {LH_ROOT} from '../../../shared/root.js';
+import {resolveModulePath} from '../../../shared/esm-utils.js';
+import {escapeIcuMessage} from '../../../shared/localization/format.js';
 
 // Match declarations of UIStrings, terminating in either a `};\n` (very likely to always be right)
 // or `}\n\n` (allowing semicolon to be optional, but insisting on a double newline so that an
@@ -188,36 +190,35 @@ function convertMessageToCtc(lhlMessage, examples = {}) {
  * @param {string} lhlMessage
  */
 function _lhlValidityChecks(lhlMessage) {
-  let parsedMessage;
+  let parsedMessageElements;
   try {
-    parsedMessage = MessageParser.parse(lhlMessage);
+    parsedMessageElements = MessageParser.parse(escapeIcuMessage(lhlMessage), {ignoreTag: true});
   } catch (err) {
     if (err.name !== 'SyntaxError') throw err;
-    // Improve the intl-messageformat-parser syntax error output.
-    /** @type {Array<{text: string}>} */
-    const expected = err.expected;
-    const expectedStr = expected.map(exp => `'${exp.text}'`).join(', ');
-    throw new Error(`Did not find the expected syntax (one of ${expectedStr}) in message "${lhlMessage}"`);
+    throw new Error(`[${err.message}] Did not find the expected syntax in message: ${err.originalMessage}`);
   }
 
-  for (const element of parsedMessage.elements) {
-    if (element.type !== 'argumentElement' || !element.format) continue;
+  /**
+   * @param {MessageParser.MessageFormatElement[]} elements
+   */
+  function validate(elements) {
+    for (const element of elements) {
+      if (element.type === MessageParser.TYPE.plural || element.type === MessageParser.TYPE.select) {
+        // `plural`/`select` arguments can't have content before or after them.
+        // See http://userguide.icu-project.org/formatparse/messages#TOC-Complex-Argument-Types
+        // e.g. https://github.com/GoogleChrome/lighthouse/pull/11068#discussion_r451682796
+        if (elements.length > 1) {
+          throw new Error(`Content cannot appear outside plural or select ICU messages. Instead, repeat that content in each option (message: '${lhlMessage}')`);
+        }
 
-    if (element.format.type === 'pluralFormat' || element.format.type === 'selectFormat') {
-      // `plural`/`select` arguments can't have content before or after them.
-      // See http://userguide.icu-project.org/formatparse/messages#TOC-Complex-Argument-Types
-      // e.g. https://github.com/GoogleChrome/lighthouse/pull/11068#discussion_r451682796
-      if (parsedMessage.elements.length > 1) {
-        throw new Error(`Content cannot appear outside plural or select ICU messages. Instead, repeat that content in each option (message: '${lhlMessage}')`);
-      }
-
-      // Each option value must also be a valid lhlMessage.
-      for (const option of element.format.options) {
-        const optionStr = lhlMessage.slice(option.value.location.start.offset, option.value.location.end.offset);
-        _lhlValidityChecks(optionStr);
+        for (const option of Object.values(element.options)) {
+          validate(option.value);
+        }
       }
     }
   }
+
+  validate(parsedMessageElements);
 }
 
 /**
@@ -388,7 +389,7 @@ function _processPlaceholderDirectIcu(icu, examples) {
   for (const [key, value] of Object.entries(examples)) {
     // Make sure all examples have ICU vars
     if (!icu.message.includes(`{${key}}`)) {
-      throw Error(`Example '${key}' provided, but has not corresponding ICU replacement in message "${icu.message}"`);
+      throw Error(`Example '${key}' provided, but has no corresponding ICU replacement in message "${icu.message}"`);
     }
     const eName = `ICU_${idx++}`;
     tempMessage = tempMessage.replace(`{${key}}`, `$${eName}$`);
@@ -516,7 +517,7 @@ function parseUIStrings(sourceStr, liveUIStrings) {
     const key = getIdentifier(property);
 
     // Use live message to avoid having to e.g. concat strings broken into parts.
-    const message = liveUIStrings[key];
+    const message = (liveUIStrings[key]);
 
     // @ts-expect-error - Not part of the public tsc interface yet.
     const jsDocComments = tsc.getJSDocCommentsAndTags(property);
@@ -613,48 +614,93 @@ function writeStringsToCtcFiles(locale, strings) {
 }
 
 /**
- * This function does two things:
+ * TODO: replace by Array.prototype.groupToMap when available.
+ * @template {unknown} T
+ * @template {string} U
+ * @param {Array<T>} elements
+ * @param {(element: T) => U} callback
+ * @return {Map<U, Array<T>>}
+ */
+function arrayGroupToMap(elements, callback) {
+  /** @type {Map<U, Array<T>>} */
+  const elementsByValue = new Map();
+
+  for (const element of elements) {
+    const key = callback(element);
+    const group = elementsByValue.get(key) || [];
+    group.push(element);
+    elementsByValue.set(key, group);
+  }
+
+  return elementsByValue;
+}
+
+/**
+ * Returns whether all the placeholders in the given CtcMessages match.
+ * @param {Array<{ctc: CtcMessage}>} strings
+ * @return {boolean}
+ */
+function doPlaceholdersMatch(strings) {
+  // Technically placeholder `content` is not required to match by TC, but since
+  // `example` must match and any auto-generated `example` is copied from `content`,
+  // it would be confusing to let it differ when `example` is explicit.
+  return strings.every(val => isDeepEqual(val.ctc.placeholders, strings[0].ctc.placeholders));
+}
+
+/**
+ * If two or more messages have the same `message`:
+ * - if `description`, and `placeholders` are also the same, TC treats them as a
+ *   single message, the collision is allowed, and no change is made.
+ * - if `description` is unique for the collision members, the `description` is
+ *   copied to `meaning` to differentiate them for TC. They must be added to the
+ *   `collidingMessages` list for this case as a nudge to not be wasteful.
+ * - if `description` is the same but `placeholders` differ, an error is thrown.
+ *   Either `placeholders` should be the same, or `message` or `description`
+ *   should be changed to explain the need for different `placeholders`.
  *
- *    - Add `meaning` property to ctc messages that have the same message but different descriptions so TC can disambiguate.
- *    - Throw if the known collisions has changed at all.
- *
+ * Modifies `strings` in place to fix collisions.
+ * @see https://github.com/GoogleChrome/lighthouse/blob/main/core/lib/i18n/README.md#collisions
  * @param {Record<string, CtcMessage>} strings
  */
 function resolveMessageCollisions(strings) {
-  /** @type {Map<string, Array<CtcMessage>>} */
-  const stringsByMessage = new Map();
+  const entries = Object.entries(strings).map(([key, ctc]) => ({key, ctc}));
 
-  // Group all the strings by their message.
-  for (const ctc of Object.values(strings)) {
-    const collisions = stringsByMessage.get(ctc.message) || [];
-    collisions.push(ctc);
-    stringsByMessage.set(ctc.message, collisions);
-  }
-
-  /** @type {Array<CtcMessage>} */
-  const allCollisions = [];
+  const stringsByMessage = arrayGroupToMap(entries, (entry) => entry.ctc.message);
   for (const messageGroup of stringsByMessage.values()) {
     // If this message didn't collide with anything else, skip it.
     if (messageGroup.length <= 1) continue;
 
-    // If group shares both message and description, they can be translated as if a single string.
-    const descriptions = new Set(messageGroup.map(ctc => ctc.description));
-    if (descriptions.size <= 1) continue;
+    // For each group of matching message+description, placeholders must also match.
+    const stringsByDescription = arrayGroupToMap(messageGroup, (entry) => entry.ctc.description);
+    for (const descriptionGroup of stringsByDescription.values()) {
+      if (!doPlaceholdersMatch(descriptionGroup)) {
+        throw new Error('string collision: `message` and `description` are the same but differ in `placeholders`:\n' +
+          descriptionGroup.map(entry => `key: ${entry.key}\n`).join('') +
+          'make `placeholders` match or update `message` or `description`s to explain why they don\'t match');
+      }
+    }
+
+    // If the entire message group has the same description and placeholders,
+    // they can be translated as if a single message, no meaning needed.
+    if (stringsByDescription.size <= 1) continue;
 
     // We have duplicate messages with different descriptions. Disambiguate using `meaning` for TC.
-    for (const ctc of messageGroup) {
+    for (const {ctc} of messageGroup) {
       ctc.meaning = ctc.description;
     }
-    allCollisions.push(...messageGroup);
   }
+}
 
-  // Check that the known collisions match our known list.
-  const collidingMessages = allCollisions.map(collision => collision.message).sort();
+/**
+ * Check that fixed collisions match our known list.
+ * @param {Record<string, CtcMessage>} strings
+ */
+function checkKnownFixedCollisions(strings) {
+  const fixedCollisions = Object.values(strings).filter(string => string.meaning);
+  const collidingMessages = fixedCollisions.map(collision => collision.message).sort();
 
   try {
     expect(collidingMessages).toEqual([
-      '$MARKDOWN_SNIPPET_0$ is deprecated. Please use standardized $MARKDOWN_SNIPPET_1$ instead.',
-      '$MARKDOWN_SNIPPET_0$ is deprecated. Please use standardized $MARKDOWN_SNIPPET_1$ instead.',
       'ARIA $MARKDOWN_SNIPPET_0$ elements do not have accessible names.',
       'ARIA $MARKDOWN_SNIPPET_0$ elements do not have accessible names.',
       'ARIA $MARKDOWN_SNIPPET_0$ elements do not have accessible names.',
@@ -663,19 +709,39 @@ function resolveMessageCollisions(strings) {
       'ARIA $MARKDOWN_SNIPPET_0$ elements have accessible names',
       'ARIA $MARKDOWN_SNIPPET_0$ elements have accessible names',
       'ARIA $MARKDOWN_SNIPPET_0$ elements have accessible names',
+      'Back/forward cache is disabled due to a keepalive request.',
+      'Back/forward cache is disabled due to a keepalive request.',
       'Consider uploading your GIF to a service which will make it available to embed as an HTML5 video.',
       'Consider uploading your GIF to a service which will make it available to embed as an HTML5 video.',
       'Consider uploading your GIF to a service which will make it available to embed as an HTML5 video.',
+      'Document contains a $MARKDOWN_SNIPPET_0$ that triggers $MARKDOWN_SNIPPET_1$',
+      'Document contains a $MARKDOWN_SNIPPET_0$ that triggers $MARKDOWN_SNIPPET_1$',
       'Document has a valid $MARKDOWN_SNIPPET_0$',
       'Document has a valid $MARKDOWN_SNIPPET_0$',
       'Failing Elements',
       'Failing Elements',
+      'Lighthouse was unable to reliably load the page you requested. Make sure you are testing the correct URL and that the server is properly responding to all requests. (Status code: $ICU_0$)',
+      'Lighthouse was unable to reliably load the page you requested. Make sure you are testing the correct URL and that the server is properly responding to all requests. (Status code: $ICU_0$)',
       'Name',
       'Name',
+      'Pages that use portals are not currently eligible for back/forward cache.',
+      'Pages that use portals are not currently eligible for back/forward cache.',
+      'Pages with an in-flight network request are not currently eligible for back/forward cache.',
+      'Pages with an in-flight network request are not currently eligible for back/forward cache.',
       'Potential Savings',
       'Potential Savings',
+      'The page was evicted from the cache to allow another page to be cached.',
+      'The page was evicted from the cache to allow another page to be cached.',
+      'Use $MARKDOWN_SNIPPET_0$ to detect unused JavaScript code. $LINK_START_0$Learn more$LINK_END_0$',
+      'Use $MARKDOWN_SNIPPET_0$ to detect unused JavaScript code. $LINK_START_0$Learn more$LINK_END_0$',
       'Use the $MARKDOWN_SNIPPET_0$ component and set the appropriate $MARKDOWN_SNIPPET_1$. $LINK_START_0$Learn more$LINK_END_0$.',
       'Use the $MARKDOWN_SNIPPET_0$ component and set the appropriate $MARKDOWN_SNIPPET_1$. $LINK_START_0$Learn more$LINK_END_0$.',
+      'Use the $MARKDOWN_SNIPPET_0$ component instead of $MARKDOWN_SNIPPET_1$ to adjust image quality. $LINK_START_0$Learn more$LINK_END_0$.',
+      'Use the $MARKDOWN_SNIPPET_0$ component instead of $MARKDOWN_SNIPPET_1$ to adjust image quality. $LINK_START_0$Learn more$LINK_END_0$.',
+      'Use the $MARKDOWN_SNIPPET_0$ component instead of $MARKDOWN_SNIPPET_1$ to automatically lazy-load images. $LINK_START_0$Learn more$LINK_END_0$.',
+      'Use the $MARKDOWN_SNIPPET_0$ component instead of $MARKDOWN_SNIPPET_1$ to automatically lazy-load images. $LINK_START_0$Learn more$LINK_END_0$.',
+      'Use the $MARKDOWN_SNIPPET_0$ component instead of $MARKDOWN_SNIPPET_1$ to automatically optimize image format. $LINK_START_0$Learn more$LINK_END_0$.',
+      'Use the $MARKDOWN_SNIPPET_0$ component instead of $MARKDOWN_SNIPPET_1$ to automatically optimize image format. $LINK_START_0$Learn more$LINK_END_0$.',
     ]);
   } catch (err) {
     console.log('The number of duplicate strings has changed. Consider duplicating the `description` to match existing strings so they\'re translated together or update this assertion if they must absolutely be translated separately');
@@ -696,6 +762,7 @@ async function main() {
   }
 
   resolveMessageCollisions(strings);
+  checkKnownFixedCollisions(strings);
 
   writeStringsToCtcFiles('en-US', strings);
   console.log('Written to disk!', 'en-US.ctc.json');
@@ -734,4 +801,5 @@ export {
   parseUIStrings,
   createPsuedoLocaleStrings,
   convertMessageToCtc,
+  resolveMessageCollisions,
 };

@@ -1,11 +1,11 @@
 /**
- * @license Copyright 2021 The Lighthouse Authors. All Rights Reserved.
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the License. You may obtain a copy of the License at http://www.apache.org/licenses/LICENSE-2.0
- * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific language governing permissions and limitations under the License.
+ * @license
+ * Copyright 2021 Google LLC
+ * SPDX-License-Identifier: Apache-2.0
  */
 
 /**
- * @fileoverview Mock fraggle rock driver for testing.
+ * @fileoverview Mock driver for testing.
  */
 
 import jestMock from 'jest-mock';
@@ -18,16 +18,20 @@ import {
 } from './mock-commands.js';
 import * as constants from '../../config/constants.js';
 import {fnAny} from '../test-utils.js';
-import {LH_ROOT} from '../../../root.js';
+import {NetworkMonitor} from '../../gather/driver/network-monitor.js';
 
 /** @typedef {import('../../gather/driver.js').Driver} Driver */
 /** @typedef {import('../../gather/driver/execution-context.js')} ExecutionContext */
 
 function createMockSession() {
+  const mockSendCommand = createMockSendCommandFn();
   return {
     setTargetInfo: fnAny(),
-    sendCommand: createMockSendCommandFn({useSessionId: false}),
+    sendCommand: mockSendCommand,
+    sendCommandAndIgnore: mockSendCommand,
     setNextProtocolTimeout: fnAny(),
+    hasNextProtocolTimeout: fnAny(),
+    getNextProtocolTimeout: fnAny(),
     once: createMockOnceFn(),
     on: createMockOnFn(),
     off: fnAny(),
@@ -35,9 +39,8 @@ function createMockSession() {
     removeProtocolMessageListener: fnAny(),
     dispose: fnAny(),
 
-    /** @return {LH.Gatherer.FRProtocolSession} */
+    /** @return {LH.Gatherer.ProtocolSession} */
     asSession() {
-      // @ts-expect-error - We'll rely on the tests passing to know this matches.
       return this;
     },
   };
@@ -51,7 +54,7 @@ function createMockCdpSession(sessionId = 'DEFAULT_ID') {
 
   return {
     id: () => sessionId,
-    send: createMockSendCommandFn({useSessionId: false}),
+    send: createMockSendCommandFn(),
     once: createMockOnceFn(),
     on: createMockOnFn(),
     off: fnAny(),
@@ -84,7 +87,7 @@ function createMockCdpConnection() {
 }
 
 /**
- * @param {LH.Gatherer.AnyFRGathererInstance['meta']} meta
+ * @param {LH.Gatherer.AnyGathererInstance['meta']} meta
  */
 function createMockGathererInstance(meta) {
   return {
@@ -95,9 +98,8 @@ function createMockGathererInstance(meta) {
     stopSensitiveInstrumentation: fnAny(),
     getArtifact: fnAny(),
 
-    /** @return {LH.Gatherer.AnyFRGathererInstance} */
+    /** @return {LH.Gatherer.AnyGathererInstance} */
     asGatherer() {
-      // @ts-expect-error - We'll rely on the tests passing to know this matches.
       return this;
     },
   };
@@ -136,12 +138,13 @@ function createMockExecutionContext() {
 function createMockTargetManager(session) {
   return {
     rootSession: () => session,
+    mainFrameExecutionContexts: () => [{uniqueId: 'EXECUTION_CTX_ID'}],
     enable: fnAny(),
     disable: fnAny(),
     on: createMockOnFn(),
     off: fnAny(),
 
-    /** @return {import('../../gather/driver/target-manager.js')} */
+    /** @return {LH.Gatherer.Driver['targetManager']} */
     asTargetManager() {
       // @ts-expect-error - We'll rely on the tests passing to know this matches.
       return this;
@@ -155,6 +158,13 @@ function createMockDriver() {
   const context = createMockExecutionContext();
   const targetManager = createMockTargetManager(session);
 
+  // The `fatalRejection`
+  /** @param {Error} _ */
+  let rej = _ => {};
+  const promise = new Promise((_, theRej) => {
+    rej = theRej;
+  });
+
   return {
     _page: page,
     _executionContext: context,
@@ -165,6 +175,12 @@ function createMockDriver() {
     disconnect: fnAny(),
     executionContext: context.asExecutionContext(),
     targetManager: targetManager.asTargetManager(),
+    fetcher: {
+      fetchResource: fnAny(),
+    },
+    networkMonitor: new NetworkMonitor(targetManager.asTargetManager()),
+    listenForCrashes: fnAny(),
+    fatalRejection: {promise, rej},
 
     /** @return {Driver} */
     asDriver() {
@@ -187,7 +203,7 @@ const runnerMock = {
   },
 };
 async function mockRunnerModule() {
-  await td.replaceEsm(`${LH_ROOT}/core/runner.js`, {Runner: runnerMock});
+  await td.replaceEsm('../../runner.js', {Runner: runnerMock});
   return runnerMock;
 }
 
@@ -203,16 +219,15 @@ function mockDriverModule(driverProvider) {
 }
 
 /**
- * @returns {LH.FRBaseArtifacts}
+ * @returns {LH.BaseArtifacts}
  */
 function createMockBaseArtifacts() {
   return {
     fetchTime: new Date().toISOString(),
     URL: {
-      initialUrl: 'about:blank',
       requestedUrl: 'https://example.com',
       mainDocumentUrl: 'https://example.com',
-      finalUrl: 'https://example.com',
+      finalDisplayedUrl: 'https://example.com',
     },
     PageLoadError: null,
     settings: constants.defaultSettings,
@@ -220,7 +235,8 @@ function createMockBaseArtifacts() {
     LighthouseRunWarnings: [],
     Timing: [],
     HostFormFactor: 'desktop',
-    HostUserAgent: 'Chrome/93.0.1449.0',
+    HostUserAgent: 'Chrome/93.0.0.0',
+    HostProduct: 'Chrome/93.0.1449.0',
     GatherContext: {gatherMode: 'navigation'},
   };
 }
@@ -233,16 +249,10 @@ function createMockContext() {
     computedCache: new Map(),
     dependencies: {},
     baseArtifacts: createMockBaseArtifacts(),
-    settings: constants.defaultSettings,
+    settings: JSON.parse(JSON.stringify(constants.defaultSettings)),
 
-    /** @return {LH.Gatherer.FRTransitionalContext} */
+    /** @return {LH.Gatherer.Context} */
     asContext() {
-      // @ts-expect-error - We'll rely on the tests passing to know this matches.
-      return this;
-    },
-
-    /** @return {LH.Gatherer.PassContext} */
-    asLegacyContext() {
       // @ts-expect-error - We'll rely on the tests passing to know this matches.
       return this;
     },
@@ -256,6 +266,7 @@ async function mockDriverSubmodules() {
     prepareTargetForTimespanMode: fnAny(),
     prepareTargetForNavigationMode: fnAny(),
     prepareTargetForIndividualNavigation: fnAny(),
+    enableAsyncStacks: fnAny().mockReturnValue(fnAny()),
   };
   const storageMock = {clearDataForOrigin: fnAny()};
   const emulationMock = {
@@ -267,7 +278,7 @@ async function mockDriverSubmodules() {
   };
 
   function reset() {
-    navigationMock.gotoURL = fnAny().mockResolvedValue({finalUrl: 'https://example.com', warnings: [], timedOut: false});
+    navigationMock.gotoURL = fnAny().mockResolvedValue({finalDisplayedUrl: 'https://example.com', warnings: [], timedOut: false});
     prepareMock.prepareThrottlingAndNetwork = fnAny().mockResolvedValue(undefined);
     prepareMock.prepareTargetForTimespanMode = fnAny().mockResolvedValue(undefined);
     prepareMock.prepareTargetForNavigationMode = fnAny().mockResolvedValue({warnings: []});

@@ -1,7 +1,7 @@
 /**
- * @license Copyright 2019 The Lighthouse Authors. All Rights Reserved.
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the License. You may obtain a copy of the License at http://www.apache.org/licenses/LICENSE-2.0
- * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific language governing permissions and limitations under the License.
+ * @license
+ * Copyright 2019 Google LLC
+ * SPDX-License-Identifier: Apache-2.0
  */
 
 import {NetworkRequest} from '../../lib/network-request.js';
@@ -11,6 +11,17 @@ import {networkRecordsToDevtoolsLog} from '../network-records-to-devtools-log.js
 describe('NetworkRequest', () => {
   afterEach(() => {
     global.isLightrider = undefined;
+  });
+
+  it('backcompat for receiveHeadersStart', function() {
+    const req = {
+      timing: {receiveHeadersEnd: 123},
+    };
+    const devtoolsLog = networkRecordsToDevtoolsLog([req]);
+    const record = NetworkRecorder.recordsFromLogs(devtoolsLog)[0];
+
+    expect(record.timing.receiveHeadersStart).toEqual(123);
+    expect(record.timing.receiveHeadersEnd).toEqual(123);
   });
 
   describe('update transfer size for Lightrider', () => {
@@ -108,13 +119,13 @@ describe('NetworkRequest', () => {
     });
   });
 
-  describe('update fetch stats for Lightrider', () => {
+  describe('update timings for Lightrider', () => {
     function getRequest() {
       return {
-        // units = seconds
-        startTime: 0,
-        endTime: 2,
-        responseReceivedTime: 1,
+        rendererStartTime: 0,
+        networkRequestTime: 50,
+        responseHeadersEndTime: 1000,
+        networkEndTime: 2000,
 
         // units = ms
         responseHeaders: [
@@ -134,11 +145,12 @@ describe('NetworkRequest', () => {
       global.isLightrider = true;
       const record = NetworkRecorder.recordsFromLogs(devtoolsLog)[0];
 
-      expect(record.startTime).toStrictEqual(0);
-      expect(record.endTime).toStrictEqual(2);
-      expect(record.responseReceivedTime).toStrictEqual(1);
+      expect(record.rendererStartTime).toStrictEqual(0);
+      expect(record.networkRequestTime).toStrictEqual(50);
+      expect(record.networkEndTime).toStrictEqual(2000);
+      expect(record.responseHeadersEndTime).toStrictEqual(1000);
       expect(record.lrStatistics).toStrictEqual({
-        endTimeDeltaMs: -8000,
+        endTimeDeltaMs: -8050,
         TCPMs: 5000,
         requestMs: 2500,
         responseMs: 2500,
@@ -171,11 +183,25 @@ describe('NetworkRequest', () => {
       expect(record.lrStatistics).toStrictEqual(undefined);
     });
 
-    it('does nothing if header timings do not add up', () => {
+    it('accepts if header timings only kinda do not add up', () => {
       const req = getRequest();
       const tcpHeader = req.responseHeaders[1];
       expect(tcpHeader.name).toStrictEqual(NetworkRequest.HEADER_TCP);
       tcpHeader.value = '5001';
+
+      const devtoolsLog = networkRecordsToDevtoolsLog([req]);
+      global.isLightrider = true;
+      const record = NetworkRecorder.recordsFromLogs(devtoolsLog)[0];
+
+      expect(record).toMatchObject(req);
+      expect(record.lrStatistics).not.toStrictEqual(undefined);
+    });
+
+    it('does nothing if header timings _really_ do not add up', () => {
+      const req = getRequest();
+      const tcpHeader = req.responseHeaders[1];
+      expect(tcpHeader.name).toStrictEqual(NetworkRequest.HEADER_TCP);
+      tcpHeader.value = '8000';
 
       const devtoolsLog = networkRecordsToDevtoolsLog([req]);
       global.isLightrider = true;
@@ -227,7 +253,7 @@ describe('NetworkRequest', () => {
       const record = NetworkRecorder.recordsFromLogs(devtoolsLog)[0];
 
       expect(record.lrStatistics).toStrictEqual({
-        endTimeDeltaMs: -8000,
+        endTimeDeltaMs: -8050,
         TCPMs: 0,
         requestMs: 0,
         responseMs: 10000,
@@ -245,7 +271,7 @@ describe('NetworkRequest', () => {
       const record = NetworkRecorder.recordsFromLogs(devtoolsLog)[0];
 
       expect(record.lrStatistics).toStrictEqual({
-        endTimeDeltaMs: -8000,
+        endTimeDeltaMs: -8050,
         TCPMs: 1000,
         requestMs: 0,
         responseMs: 9000,
@@ -269,7 +295,7 @@ describe('NetworkRequest', () => {
         sslStart: 35,
       });
       expect(lrRecord.lrStatistics).toStrictEqual({
-        endTimeDeltaMs: -8000,
+        endTimeDeltaMs: -8050,
         TCPMs: 5000,
         requestMs: 2500,
         responseMs: 2500,
@@ -361,6 +387,24 @@ describe('NetworkRequest', () => {
         protocol: 'h2',
         parsedURL: {scheme: 'http', host: 'google.com'},
       })).toBe(false);
+    });
+  });
+
+  describe('#isContentEncoded', () => {
+    const isContentEncoded = NetworkRequest.isContentEncoded;
+
+    it('correctly identifies no compression', () => {
+      expect(isContentEncoded({responseHeaders: []})).toBe(false);
+    });
+    it('correctly identifies brotli', () => {
+      expect(isContentEncoded({
+        responseHeaders: [{name: 'content-encoding', value: 'br'}],
+      })).toBe(true);
+    });
+    it('correctly identifies zstd', () => {
+      expect(isContentEncoded({
+        responseHeaders: [{name: 'content-encoding', value: 'zstd'}],
+      })).toBe(true);
     });
   });
 });

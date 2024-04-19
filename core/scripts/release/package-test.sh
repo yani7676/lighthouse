@@ -20,8 +20,7 @@ cd /tmp/lighthouse-local-test
 
 npm init -y
 npm install "$LH_ROOT/lighthouse-$VERSION.tgz"
-npm install lighthouse-plugin-publisher-ads@next
-npm explore lighthouse -- npm run fast -- http://example.com
+npm explore lighthouse -- npm run fast -- http://example.com --chrome-flags=--headless=new
 
 # Packaged smokehouse/lighthouse using root's static-server and test fixtures.
 # This is because we don't have access to any of the dev dependencies.

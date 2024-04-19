@@ -1,11 +1,14 @@
 /**
- * @license Copyright 2019 The Lighthouse Authors. All Rights Reserved.
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the License. You may obtain a copy of the License at http://www.apache.org/licenses/LICENSE-2.0
- * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific language governing permissions and limitations under the License.
+ * @license
+ * Copyright 2019 Google LLC
+ * SPDX-License-Identifier: Apache-2.0
  */
 
 import * as collect from '../../../scripts/i18n/collect-strings.js';
 
+/** @typedef {collect.CtcMessage & Required<Pick<collect.CtcMessage, 'placeholders'>>} CtcWithPlaceholders */
+
+/** @param {string} justUIStrings */
 function evalJustUIStrings(justUIStrings) {
   return Function(`'use strict'; ${justUIStrings} return UIStrings;`)();
 }
@@ -334,7 +337,7 @@ describe('#_lhlValidityChecks', () => {
   it('errors when using non-supported custom-formatted ICU format', () => {
     const message = 'Hello World took {var, badFormat, milliseconds}.';
     expect(() => collect.convertMessageToCtc(message)).toThrow(
-      /Did not find the expected syntax \(one of 'number', 'date', 'time', 'plural', 'selectordinal', 'select'\) in message "Hello World took {var, badFormat, milliseconds}."$/);
+      /\[INVALID_ARGUMENT_TYPE\] Did not find the expected syntax in message: Hello World took {var, badFormat, milliseconds}.$/);
   });
 
   it('errors when there is content outside of a plural argument', () => {
@@ -367,14 +370,14 @@ describe('#_lhlValidityChecks', () => {
       /Content cannot appear outside plural or select ICU messages.*=1 {1 request} other {# requests}}'\)$/);
   });
 
-  it('errors when there is content outside of nested plural aguments', () => {
+  it('errors when there is content outside of nested plural arguments', () => {
     const message = `{user_gender, select,
       female {Ms. {name} received {count, plural, =1 {one award.} other {# awards.}}}
       male {Mr. {name} received {count, plural, =1 {one award.} other {# awards.}}}
       other {{name} received {count, plural, =1 {one award.} other {# awards.}}}
     }`;
     expect(() => collect.convertMessageToCtc(message, {name: 'Elbert'})).toThrow(
-      /Content cannot appear outside plural or select ICU messages.*\(message: 'Ms. {name} received {count, plural, =1 {one award.} other {# awards.}}'\)$/);
+      /Content cannot appear outside plural or select ICU messages.*\(message: '{user_gender, select/);
   });
   /* eslint-enable max-len */
 });
@@ -559,7 +562,7 @@ describe('Convert Message to Placeholder', () => {
     const message = 'Hello name.';
     expect(() => collect.convertMessageToCtc(message, {name: 'Mary'}))
       // eslint-disable-next-line max-len
-      .toThrow(/Example 'name' provided, but has not corresponding ICU replacement in message "Hello name."/);
+      .toThrow(/Example 'name' provided, but has no corresponding ICU replacement in message "Hello name."/);
   });
 
   it('errors when direct ICU has no examples', () => {
@@ -590,17 +593,169 @@ describe('Convert Message to Placeholder', () => {
   });
 });
 
+describe('collisions', () => {
+  /**
+   * @template {unknown} T
+   * @param {T} input
+   * @return {T}
+   */
+  function deepClone(input) {
+    return JSON.parse(JSON.stringify(input));
+  }
+
+  /** @return {Record<'first'|'second'|'third', CtcWithPlaceholders>} */
+  function getStrings() {
+    const ctcMessage = {
+      message: 'Need absolute URL ($ICU_0$)',
+      description: 'Explanatory message.',
+      placeholders: {
+        ICU_0: {
+          content: '{url}',
+          example: 'https://example.com/',
+        },
+      },
+    };
+
+    return {
+      first: deepClone(ctcMessage),
+      second: deepClone(ctcMessage),
+      third: deepClone(ctcMessage),
+    };
+  }
+
+  it('finds no collisions with three unique ctc messages', () => {
+    const originalStrings = getStrings();
+    originalStrings.first.message += '1';
+    originalStrings.second.message += '2';
+    originalStrings.third.message += '3';
+
+    const testStrings = deepClone(originalStrings);
+    collect.resolveMessageCollisions(testStrings);
+    expect(testStrings).toEqual(originalStrings);
+    // No meanings added.
+    expect(Object.values(testStrings).filter(str => str.meaning)).toHaveLength(0);
+  });
+
+  it('finds only allowed collisions and takes no actions for three identical ctc messages', () => {
+    const originalStrings = getStrings();
+    const testStrings = deepClone(originalStrings);
+    collect.resolveMessageCollisions(testStrings);
+    expect(testStrings).toEqual(originalStrings);
+    // No meanings added.
+    expect(Object.values(testStrings).filter(str => str.meaning)).toHaveLength(0);
+  });
+
+  it('uses meaning to disambiguate collisions with different descriptions', () => {
+    const testStrings = getStrings();
+    testStrings.first.description += '1';
+    testStrings.second.description += '2';
+    testStrings.third.description += '3';
+
+    const expectedStrings = deepClone(testStrings);
+    expectedStrings.first.meaning = expectedStrings.first.description;
+    expectedStrings.second.meaning = expectedStrings.second.description;
+    expectedStrings.third.meaning = expectedStrings.third.description;
+
+    collect.resolveMessageCollisions(testStrings);
+    expect(testStrings).toEqual(expectedStrings);
+  });
+
+  it('all collisions with different descriptions get a meaning', () => {
+    const testStrings = getStrings();
+    testStrings.third.description += '3';
+
+    const expectedStrings = deepClone(testStrings);
+    expectedStrings.first.meaning = expectedStrings.first.description;
+    expectedStrings.second.meaning = expectedStrings.second.description;
+    // Even though `third` has a unique description, still gets a `meaning`.
+    expectedStrings.third.meaning = expectedStrings.third.description;
+
+    collect.resolveMessageCollisions(testStrings);
+    expect(testStrings).toEqual(expectedStrings);
+  });
+
+  it('only alters and returns fixed collisions', () => {
+    const testStrings = getStrings();
+    // `first` will not collide.
+    testStrings.first.message += '1';
+    testStrings.third.description += '3';
+
+    const expectedStrings = deepClone(testStrings);
+    expectedStrings.second.meaning = expectedStrings.second.description;
+    expectedStrings.third.meaning = expectedStrings.third.description;
+
+    collect.resolveMessageCollisions(testStrings);
+    expect(testStrings).toEqual(expectedStrings);
+  });
+
+  describe('placeholders', () => {
+    it('throws if collisions have different placeholder tokens', () => {
+      const testStrings = getStrings();
+      testStrings.first.message.replace('ICU_0', 'SOMETHING_ELSE');
+      testStrings.first.placeholders = {SOMETHING_ELSE: testStrings.first.placeholders.ICU_0};
+
+      expect(() => collect.resolveMessageCollisions(testStrings))
+        .toThrow(/collision: .* differ in `placeholders`.*key: first\nkey: second\nkey: third/s);
+    });
+
+    it('throws if collisions have different placeholder content', () => {
+      const testStrings = getStrings();
+      testStrings.first.placeholders.ICU_0.content = 'something else';
+
+      expect(() => collect.resolveMessageCollisions(testStrings))
+        .toThrow(/collision: .* differ in `placeholders`.*key: first\nkey: second\nkey: third/s);
+    });
+
+    it('throws if collisions have different placeholder example', () => {
+      const testStrings = getStrings();
+      testStrings.first.placeholders.ICU_0.example = 'notaurl';
+
+      expect(() => collect.resolveMessageCollisions(testStrings))
+        .toThrow(/collision: .* differ in `placeholders`.*key: first\nkey: second\nkey: third/s);
+    });
+
+    it('throws only for unfixed collisions with different placeholders', () => {
+      const testStrings = getStrings();
+      // `second` will not collide.
+      testStrings.second.message += '2';
+      // `first` and `third` collide and have different placeholders.
+      testStrings.first.placeholders.ICU_0.content = 'different';
+
+      expect(() => collect.resolveMessageCollisions(testStrings))
+        .toThrow(/collision: .* differ in `placeholders`.*key: first\nkey: third/s);
+    });
+
+    it('does not throw if different placeholders are unique per description', () => {
+      const testStrings = getStrings();
+      // Non-matching placeholder, would cause error.
+      testStrings.first.placeholders.ICU_0.content = 'something else';
+      // But description is also different, so can be fixed with meaning.
+      testStrings.first.description += '1';
+
+      const expectedStrings = deepClone(testStrings);
+      expectedStrings.first.meaning = expectedStrings.first.description;
+      expectedStrings.second.meaning = expectedStrings.second.description;
+      expectedStrings.third.meaning = expectedStrings.third.description;
+
+      collect.resolveMessageCollisions(testStrings);
+      expect(testStrings).toEqual(expectedStrings);
+    });
+  });
+});
+
 describe('PseudoLocalizer', () => {
   it('adds cute hats to strings', () => {
     const strings = {
       hello: {
         message: 'world',
+        description: 'yah',
       },
     };
     const res = collect.createPsuedoLocaleStrings(strings);
     expect(res).toEqual({
       hello: {
         message: 'ŵór̂ĺd̂',
+        description: 'yah',
       },
     });
   });
@@ -609,12 +764,14 @@ describe('PseudoLocalizer', () => {
     const strings = {
       hello: {
         message: '{world}',
+        description: 'nah',
       },
     };
     const res = collect.createPsuedoLocaleStrings(strings);
     expect(res).toEqual({
       hello: {
         message: '{world}',
+        description: 'nah',
       },
     });
   });
@@ -623,12 +780,14 @@ describe('PseudoLocalizer', () => {
     const strings = {
       hello: {
         message: '{num_worlds, plural, =1{world} other{worlds}}',
+        description: 'yay',
       },
     };
     const res = collect.createPsuedoLocaleStrings(strings);
     expect(res).toEqual({
       hello: {
         message: '{num_worlds, plural, =1{ŵór̂ĺd̂} other{ẃôŕl̂d́ŝ}}',
+        description: 'yay',
       },
     });
   });
@@ -637,6 +796,7 @@ describe('PseudoLocalizer', () => {
     const strings = {
       hello: {
         message: 'Hello $MARKDOWN_SNIPPET_0$',
+        description: 'yay',
         placeholders: {
           MARKDOWN_SNIPPET_0: {
             content: '`World`',
@@ -649,6 +809,7 @@ describe('PseudoLocalizer', () => {
     expect(res).toEqual({
       hello: {
         message: 'Ĥél̂ĺô $MARKDOWN_SNIPPET_0$',
+        description: 'yay',
         placeholders: {
           MARKDOWN_SNIPPET_0: {
             content: '`World`',

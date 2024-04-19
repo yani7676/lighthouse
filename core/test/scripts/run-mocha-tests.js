@@ -1,7 +1,7 @@
 /**
- * @license Copyright 2022 The Lighthouse Authors. All Rights Reserved.
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the License. You may obtain a copy of the License at http://www.apache.org/licenses/LICENSE-2.0
- * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific language governing permissions and limitations under the License.
+ * @license
+ * Copyright 2022 Google LLC
+ * SPDX-License-Identifier: Apache-2.0
  */
 
 /**
@@ -19,8 +19,11 @@ import yargs from 'yargs';
 import * as yargsHelpers from 'yargs/helpers';
 import glob from 'glob';
 
-import {LH_ROOT} from '../../../root.js';
+import {LH_ROOT} from '../../../shared/root.js';
 import {mochaGlobalSetup, mochaGlobalTeardown} from '../test-env/mocha-setup.js';
+
+// Tell gatherer to use 100 quality for FPS tests.
+process.env.LH_FPS_TEST = '1';
 
 const failedTestsDir = `${LH_ROOT}/.tmp/failing-tests`;
 
@@ -50,8 +53,6 @@ function getFailedTests() {
 // all test files (everything if --no-parallel, else each worker will load a subset of the files
 // all at once). This results in unexpected mocks contaminating other test files.
 //
-// Tests do other undesired things in the global scope too, such as enabling fake timers.
-//
 // For now, we isolate a number of tests until they can be refactored.
 //
 // To run tests without isolation, and all in one process:
@@ -63,28 +64,12 @@ function getFailedTests() {
 //    yarn mocha --no-parallel
 // (also, just comment out the `testsToRunIsolated` below, as they won't impact this verification)
 const testsToIsolate = new Set([
-  // grep -lRE '^timers\.useFakeTimers' --include='*-test.*' --exclude-dir=node_modules
-  'flow-report/test/common-test.tsx',
-  'core/test/gather/session-test.js',
-  'core/test/legacy/gather/driver-test.js',
-  'core/test/gather/driver/execution-context-test.js',
-  'core/test/gather/driver/navigation-test.js',
-  'core/test/gather/driver/wait-for-condition-test.js',
-  'core/test/gather/gatherers/css-usage-test.js',
-  'core/test/gather/gatherers/image-elements-test.js',
-  'core/test/gather/gatherers/inspector-issues-test.js',
-  'core/test/gather/gatherers/js-usage-test.js',
-  'core/test/gather/gatherers/source-maps-test.js',
-  'core/test/gather/gatherers/trace-elements-test.js',
-  'core/test/gather/gatherers/trace-test.js',
-
   // grep -lRE '^await td\.replace' --include='*-test.*' --exclude-dir=node_modules
   'core/test/gather/snapshot-runner-test.js',
   'core/test/gather/timespan-runner-test.js',
   'core/test/user-flow-test.js',
   'core/test/gather/driver/prepare-test.js',
   'core/test/gather/gatherers/link-elements-test.js',
-  'core/test/gather/gatherers/service-worker-test.js',
   'core/test/runner-test.js',
 
   // grep -lRE --include='-test.js' 'mockDriverSubmodules|mockRunnerModule|mockDriverModule|mockDriverSubmodules|makeMocksForGatherRunner' --include='*-test.*' --exclude-dir=node_modules
@@ -92,9 +77,7 @@ const testsToIsolate = new Set([
   'core/test/gather/snapshot-runner-test.js',
   'core/test/gather/timespan-runner-test.js',
   'core/test/user-flow-test.js',
-  'core/test/legacy/gather/gather-runner-test.js',
   'core/test/gather/gatherers/dobetterweb/response-compression-test.js',
-  'core/test/gather/gatherers/script-elements-test.js',
   'core/test/runner-test.js',
 
   // These tend to timeout in puppeteer when run in parallel with other tests.
@@ -107,7 +90,6 @@ const testsToIsolate = new Set([
   'flow-report/test/flow-report-pptr-test.ts',
   'cli/test/cli/bin-test.js',
   'cli/test/cli/run-test.js',
-  'core/test/legacy/config/config-test.js',
   'core/test/config/config-test.js',
   'core/test/lib/emulation-test.js',
   'core/test/lib/sentry-test.js',
@@ -165,11 +147,19 @@ const rawArgv = y
     'require': {
       type: 'string',
     },
+    'retries': {
+      type: 'number',
+      default: process.env.CI ? 5 : undefined,
+    },
+    'forbidOnly': {
+      type: 'boolean',
+      default: Boolean(process.env.CI),
+    },
   })
   .wrap(y.terminalWidth())
   .argv;
 const argv =
-  /** @type {Awaited<typeof rawArgv> & CamelCasify<Awaited<typeof rawArgv>>} */ (rawArgv);
+  /** @type {Awaited<typeof rawArgv> & LH.Util.CamelCasify<Awaited<typeof rawArgv>>} */ (rawArgv);
 
 // This captures all of our mocha tests except for:
 // * flow-report, because it needs to provide additional mocha flags
@@ -188,23 +178,28 @@ const defaultTestMatches = [
   'viewer/**/*-test.js',
 ];
 
-const filterFilePatterns = argv._.filter(arg => !(typeof arg !== 'string' || arg.startsWith('--')));
+const filterFilePatterns = argv._.filter(arg => !(typeof arg !== 'string' || arg.startsWith('--')))
+  .map(pattern => {
+    if (path.isAbsolute(pattern)) {
+      // Allows this to work:
+      //     yarn mocha /Users/cjamcl/src/lighthouse/core/test/runner-test.js
+      return path.relative(LH_ROOT, pattern);
+    } else {
+      return pattern;
+    }
+  });
 
 function getTestFiles() {
   // Collect all the possible test files, based off the provided testMatch glob pattern
   // or the default patterns defined above.
   const testsGlob = argv.testMatch || `{${defaultTestMatches.join(',')}}`;
-  const allTestFiles = glob.sync(testsGlob, {cwd: LH_ROOT, absolute: true});
+  const allTestFiles = glob.sync(testsGlob, {cwd: LH_ROOT, ignore: '**/node_modules/**'});
 
   // If provided, filter the test files using a basic string includes on the absolute path of
-  // each test file. Map back to a relative path because it's nice to keep the printed commands shorter.
-  // Why pass `absolute: true` to glob above? So that this works:
-  //     yarn mocha /Users/cjamcl/src/lighthouse/core/test/runner-test.js
-  let filteredTests = (
-    filterFilePatterns.length ?
-      allTestFiles.filter((file) => filterFilePatterns.some(pattern => file.includes(pattern))) :
-      allTestFiles
-  ).map(testPath => path.relative(process.cwd(), testPath));
+  // each test file.
+  let filteredTests = filterFilePatterns.length ?
+    allTestFiles.filter((file) => filterFilePatterns.some(pattern => file.includes(pattern))) :
+    allTestFiles;
 
   let grep;
   if (argv.onlyFailures) {
@@ -215,6 +210,8 @@ function getTestFiles() {
     grep = new RegExp(titles.map(escapeRegex).join('|'));
 
     filteredTests = filteredTests.filter(file => failedTests.some(failed => failed.file === file));
+  } else if (argv.t) {
+    grep = argv.t;
   }
 
   if (filterFilePatterns.length) {
@@ -226,17 +223,12 @@ function getTestFiles() {
 }
 
 /**
- * @param {{numberFailures: number, numberMochaInvocations: number}} params
+ * @param {{numberFailures: number}} params
  */
-function exit({numberFailures, numberMochaInvocations}) {
+function exit({numberFailures}) {
   if (!numberFailures) {
     console.log('Tests passed');
     process.exit(0);
-  }
-
-  if (numberMochaInvocations === 1) {
-    console.log('Tests failed');
-    process.exit(1);
   }
 
   // If running many instances of mocha, failed results can get lost in the output.
@@ -267,10 +259,12 @@ function exit({numberFailures, numberMochaInvocations}) {
 
 /**
  * @typedef OurMochaArgs
- * @property {RegExp | undefined} grep
+ * @property {RegExp | string | undefined} grep
  * @property {boolean} bail
+ * @property {boolean} forbidOnly
  * @property {boolean} parallel
  * @property {string | undefined} require
+ * @property {number | undefined} retries
  */
 
 /**
@@ -279,31 +273,65 @@ function exit({numberFailures, numberMochaInvocations}) {
  * @param {number} invocationNumber
  */
 async function runMocha(tests, mochaArgs, invocationNumber) {
-  process.env.LH_FAILED_TESTS_FILE = `${failedTestsDir}/output-${invocationNumber}.json`;
+  const failedTestsFile = `${failedTestsDir}/output-${invocationNumber}.json`;
+  const notRunnableTestsFile = `${failedTestsDir}/output-${invocationNumber}-not-runnable.json`;
+  process.env.LH_FAILED_TESTS_FILE = failedTestsFile;
 
   const rootHooksPath = mochaArgs.require || '../test-env/mocha-setup.js';
   const {rootHooks} = await import(rootHooksPath);
 
-  try {
-    const mocha = new Mocha({
-      rootHooks,
-      timeout: 20_000,
-      bail: mochaArgs.bail,
-      grep: mochaArgs.grep,
-      // TODO: not working
-      // parallel: tests.length > 1 && mochaArgs.parallel,
-      parallel: false,
-    });
+  const mocha = new Mocha({
+    rootHooks,
+    timeout: 20_000,
+    bail: mochaArgs.bail,
+    grep: mochaArgs.grep,
+    forbidOnly: mochaArgs.forbidOnly,
+    // TODO: not working
+    // parallel: parsableTests.length > 1 && mochaArgs.parallel,
+    parallel: false,
+    retries: mochaArgs.retries,
+  });
 
-    // @ts-expect-error - not in types.
-    mocha.lazyLoadFiles(true);
-    for (const test of tests) mocha.addFile(test);
-    await mocha.loadFilesAsync();
-    return await new Promise(resolve => mocha.run(resolve));
-  } catch (err) {
-    console.error(err);
-    return 1;
+  // Load a single test module at a time, so we know which ones fail to even import.
+  const notRunnableTests = [];
+  const parsableTests = [];
+  for (const test of tests) {
+    try {
+      mocha.files = [test];
+      await mocha.loadFilesAsync();
+      parsableTests.push(test);
+    } catch (e) {
+      notRunnableTests.push({
+        file: path.relative(LH_ROOT, test),
+        title: '',
+        error: `Failed to parse module: ${e}`,
+      });
+    }
   }
+  mocha.files = [];
+
+  let failingTestCount = 0;
+  if (parsableTests.length) {
+    try {
+      failingTestCount = await new Promise(resolve => mocha.run(resolve));
+    } catch (err) {
+      // Something awful happened, and maybe no tests ran at all.
+      const errorMessage = `Mocha failed to run: ${err}`;
+      notRunnableTests.push(...parsableTests.map((test, i) => {
+        return {
+          file: path.relative(LH_ROOT, test),
+          title: '',
+          error: i === 0 ? errorMessage : '(see above failure)',
+        };
+      }));
+    }
+  }
+
+  if (notRunnableTests.length) {
+    fs.writeFileSync(notRunnableTestsFile, JSON.stringify(notRunnableTests, null, 2));
+  }
+
+  return failingTestCount + notRunnableTests.length;
 }
 
 async function main() {
@@ -337,6 +365,8 @@ async function main() {
     bail: argv.bail,
     parallel: argv.parallel,
     require: argv.require,
+    retries: argv.retries,
+    forbidOnly: argv.forbidOnly,
   };
 
   mochaGlobalSetup();
@@ -346,7 +376,7 @@ async function main() {
     if (testsToRunTogether.length) {
       numberFailures += await runMocha(testsToRunTogether, mochaArgs, numberMochaInvocations);
       numberMochaInvocations += 1;
-      if (numberFailures && argv.bail) exit({numberFailures, numberMochaInvocations});
+      if (numberFailures && argv.bail) exit({numberFailures});
     }
 
     for (const test of testsToRunIsolated) {
@@ -369,13 +399,13 @@ async function main() {
       }
 
       numberMochaInvocations += 1;
-      if (numberFailures && argv.bail) exit({numberFailures, numberMochaInvocations});
+      if (numberFailures && argv.bail) exit({numberFailures});
     }
   } finally {
     mochaGlobalTeardown();
   }
 
-  exit({numberFailures, numberMochaInvocations});
+  exit({numberFailures});
 }
 
 await main();

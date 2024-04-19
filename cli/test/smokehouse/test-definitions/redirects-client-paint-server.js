@@ -1,10 +1,10 @@
 /**
- * @license Copyright 2017 The Lighthouse Authors. All Rights Reserved.
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the License. You may obtain a copy of the License at http://www.apache.org/licenses/LICENSE-2.0
- * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific language governing permissions and limitations under the License.
+ * @license
+ * Copyright 2017 Google LLC
+ * SPDX-License-Identifier: Apache-2.0
  */
 
-/** @type {LH.Config.Json} */
+/** @type {LH.Config} */
 const config = {
   extends: 'lighthouse:default',
   settings: {
@@ -28,7 +28,7 @@ const expectations = {
   // TODO: Assert performance metrics on client-side redirects, see https://github.com/GoogleChrome/lighthouse/pull/10325
   lhr: {
     requestedUrl: `http://localhost:10200/js-redirect.html?delay=2000&jsDelay=5000&jsRedirect=%2Fonline-only.html%3Fdelay%3D1000%26redirect%3D%2Fredirects-final.html`,
-    finalUrl: 'http://localhost:10200/redirects-final.html',
+    finalDisplayedUrl: 'http://localhost:10200/redirects-final.html',
     audits: {
       // Just captures the server-side at the moment, should be 8s in the future
       'first-contentful-paint': {
@@ -44,9 +44,12 @@ const expectations = {
         score: '<1',
         numericValue: '>=8000',
         details: {
-          items: {
-            length: 3,
-          },
+          items: [
+            // Conservative wastedMs to avoid flakes.
+            {url: /js-redirect\.html/, wastedMs: '>6000'},
+            {url: /online-only\.html/, wastedMs: '>500'},
+            {url: /redirects-final\.html/, wastedMs: 0},
+          ],
         },
       },
     },

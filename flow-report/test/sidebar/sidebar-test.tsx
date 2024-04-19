@@ -1,7 +1,7 @@
 /**
- * @license Copyright 2021 The Lighthouse Authors. All Rights Reserved.
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the License. You may obtain a copy of the License at http://www.apache.org/licenses/LICENSE-2.0
- * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific language governing permissions and limitations under the License.
+ * @license
+ * Copyright 2021 Google LLC
+ * SPDX-License-Identifier: Apache-2.0
  */
 
 import {render} from '@testing-library/preact';
@@ -58,10 +58,18 @@ describe('SidebarRuntimeSettings', () => {
         throughputKbps: 1.6 * 1024,
         rttMs: 150,
       },
+      screenEmulation: {
+        disabled: false,
+        width: 200,
+        height: 200,
+        deviceScaleFactor: 3,
+        mobile: true,
+      },
     } as any;
     const root = render(<SidebarRuntimeSettings settings={settings}/>, {wrapper});
 
-    expect(root.getByText('Emulated Moto G4')).toBeTruthy();
+    expect(root.getByText('Emulated Moto G Power - 200x200, DPR 3')).toBeTruthy();
+    expect(root.queryByText('Emulated Moto G Power -')).toBeFalsy();
     expect(root.getByText('Slow 4G throttling')).toBeTruthy();
     expect(root.getByText('4x slowdown'));
   });
@@ -78,11 +86,31 @@ describe('SidebarRuntimeSettings', () => {
         throughputKbps: 1,
         rttMs: 1,
       },
+      screenEmulation: {
+        width: 100,
+        height: 100,
+        mobile: false,
+        deviceScaleFactor: 2,
+      },
     } as any;
     const root = render(<SidebarRuntimeSettings settings={settings}/>, {wrapper});
 
-    expect(root.getByText('Emulated Desktop')).toBeTruthy();
+    expect(root.getByText('Emulated Desktop - 100x100, DPR 2')).toBeTruthy();
     expect(root.getByText('Custom throttling')).toBeTruthy();
     expect(root.getByText('1x slowdown'));
+  });
+
+  it('displays runtime settings when screenEmulation disabled', async () => {
+    const settings = {
+      formFactor: 'mobile',
+      throttlingMethod: 'provided',
+      throttling: {},
+      screenEmulation: {disabled: true},
+    } as any;
+    const root = render(<SidebarRuntimeSettings settings={settings}/>, {wrapper});
+
+    expect(root.getByText('No emulation')).toBeTruthy();
+    expect(root.queryByText('Emulated Moto G Power -')).toBeFalsy();
+    expect(root.getByText('Provided by environment')).toBeTruthy();
   });
 });

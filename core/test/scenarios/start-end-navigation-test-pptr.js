@@ -1,12 +1,12 @@
 /**
- * @license Copyright 2022 The Lighthouse Authors. All Rights Reserved.
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the License. You may obtain a copy of the License at http://www.apache.org/licenses/LICENSE-2.0
- * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific language governing permissions and limitations under the License.
+ * @license
+ * Copyright 2022 Google LLC
+ * SPDX-License-Identifier: Apache-2.0
  */
 
-import * as lighthouse from '../../api.js';
+import * as api from '../../index.js';
 import {createTestState, getAuditsBreakdown} from './pptr-test-utils.js';
-import {LH_ROOT} from '../../../root.js';
+import {LH_ROOT} from '../../../shared/root.js';
 
 /* eslint-env browser */
 
@@ -19,14 +19,14 @@ describe('Start/End navigation', function() {
   state.installSetupAndTeardownHooks();
 
   before(() => {
-    state.server.baseDir = `${LH_ROOT}/core/test/fixtures/fraggle-rock/navigation-basic`;
+    state.server.baseDir = `${LH_ROOT}/core/test/fixtures/user-flows/navigation-basic`;
   });
 
   it('should capture a navigation via user interaction', async () => {
     const pageUrl = `${state.serverBaseUrl}/links-to-index.html`;
     await state.page.goto(pageUrl, {waitUntil: ['networkidle0']});
 
-    const flow = await lighthouse.startFlow(state.page);
+    const flow = await api.startFlow(state.page);
 
     await flow.startNavigation();
     await state.page.click('a');
@@ -37,15 +37,16 @@ describe('Start/End navigation', function() {
     const lhr = flowResult.steps[0].lhr;
     const artifacts = flowArtifacts.gatherSteps[0].artifacts;
 
+    state.saveTrace(artifacts.Trace);
+
     expect(artifacts.URL).toEqual({
-      initialUrl: `${state.serverBaseUrl}/links-to-index.html`,
       requestedUrl: `${state.serverBaseUrl}/?redirect=/index.html`,
       mainDocumentUrl: `${state.serverBaseUrl}/index.html`,
-      finalUrl: `${state.serverBaseUrl}/index.html`,
+      finalDisplayedUrl: `${state.serverBaseUrl}/index.html`,
     });
 
     expect(lhr.requestedUrl).toEqual(`${state.serverBaseUrl}/?redirect=/index.html`);
-    expect(lhr.finalUrl).toEqual(`${state.serverBaseUrl}/index.html`);
+    expect(lhr.finalDisplayedUrl).toEqual(`${state.serverBaseUrl}/index.html`);
 
     const {erroredAudits} = getAuditsBreakdown(lhr);
     expect(erroredAudits).toHaveLength(0);

@@ -1,7 +1,7 @@
 /**
- * @license Copyright 2019 The Lighthouse Authors. All Rights Reserved.
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the License. You may obtain a copy of the License at http://www.apache.org/licenses/LICENSE-2.0
- * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific language governing permissions and limitations under the License.
+ * @license
+ * Copyright 2019 Google LLC
+ * SPDX-License-Identifier: Apache-2.0
  */
 
 import {Audit} from '../audit.js';
@@ -9,9 +9,9 @@ import * as i18n from '../../lib/i18n/i18n.js';
 import {LargestContentfulPaint as ComputedLcp} from '../../computed/metrics/largest-contentful-paint.js';
 
 const UIStrings = {
-  /** Description of the Largest Contentful Paint (LCP) metric, which marks the time at which the largest text or image is painted by the browser. This is displayed within a tooltip when the user hovers on the metric name to see more. No character length limits. 'Learn More' becomes link text to additional documentation. */
+  /** Description of the Largest Contentful Paint (LCP) metric, which marks the time at which the largest text or image is painted by the browser. This is displayed within a tooltip when the user hovers on the metric name to see more. No character length limits. The last sentence starting with 'Learn' becomes link text to additional documentation. */
   description: 'Largest Contentful Paint marks the time at which the largest text or image is ' +
-      `painted. [Learn more about the Largest Contentful Paint metric](https://web.dev/lighthouse-largest-contentful-paint/)`,
+      `painted. [Learn more about the Largest Contentful Paint metric](https://developer.chrome.com/docs/lighthouse/performance/lighthouse-largest-contentful-paint/)`,
 };
 
 const str_ = i18n.createIcuMessageFn(import.meta.url, UIStrings);
@@ -39,7 +39,7 @@ class LargestContentfulPaint extends Audit {
       mobile: {
         // 25th and 13th percentiles HTTPArchive -> median and p10 points.
         // https://bigquery.cloud.google.com/table/httparchive:lighthouse.2020_02_01_mobile?pli=1
-        // https://web.dev/lcp/#what-is-a-good-lcp-score
+        // https://web.dev/articles/lcp#what_is_a_good_lcp_score
         // see https://www.desmos.com/calculator/1etesp32kt
         scoring: {
           p10: 2500,
@@ -83,6 +83,7 @@ class LargestContentfulPaint extends Audit {
         options.scoring,
         metricResult.timing
       ),
+      scoringOptions: options.scoring,
       numericValue: metricResult.timing,
       numericUnit: 'millisecond',
       displayValue: str_(i18n.UIStrings.seconds, {timeInMs: metricResult.timing}),

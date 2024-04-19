@@ -1,7 +1,7 @@
 /**
- * @license Copyright 2020 The Lighthouse Authors. All Rights Reserved.
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the License. You may obtain a copy of the License at http://www.apache.org/licenses/LICENSE-2.0
- * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific language governing permissions and limitations under the License.
+ * @license
+ * Copyright 2020 Google LLC
+ * SPDX-License-Identifier: Apache-2.0
  */
 
 import path from 'path';
@@ -10,13 +10,11 @@ import log from 'lighthouse-logger';
 
 import {Runner} from '../runner.js';
 import defaultConfig from './default-config.js';
-import {defaultNavigationConfig, nonSimulatedPassConfigOverrides} from './constants.js'; // eslint-disable-line max-len
+import {nonSimulatedSettingsOverrides} from './constants.js'; // eslint-disable-line max-len
 import {
-  isFRGathererDefn,
   throwInvalidDependencyOrder,
   isValidArtifactDependency,
   throwInvalidArtifactDependency,
-  assertArtifactTopologicalOrder,
   assertValidConfig,
 } from './validation.js';
 import {filterConfigByGatherMode, filterConfigByExplicitFilters} from './filters.js';
@@ -29,7 +27,7 @@ import {
   mergeConfigFragment,
   mergeConfigFragmentArrayByKey,
 } from './config-helpers.js';
-import {getModuleDirectory} from '../../esm-utils.js';
+import {getModuleDirectory} from '../../shared/esm-utils.js';
 import * as format from '../../shared/localization/format.js';
 
 const defaultConfigPath = path.join(
@@ -38,19 +36,31 @@ const defaultConfigPath = path.join(
 );
 
 /**
- * @param {LH.Config.Json|undefined} configJSON
- * @param {{configPath?: string}} context
- * @return {{configWorkingCopy: LH.Config.Json, configDir?: string, configPath?: string}}
+ * Certain gatherers are destructive to the page state.
+ * We should ensure that these gatherers run after any custom gatherers.
+ * The default priority should be 0.
+ * TODO: Make this an official part of the config or design a different solution.
+ * @type {Record<string, number|undefined>}
  */
-function resolveWorkingCopy(configJSON, context) {
+const internalArtifactPriorities = {
+  FullPageScreenshot: 1,
+  BFCacheFailures: 1,
+};
+
+/**
+ * @param {LH.Config|undefined} config
+ * @param {{configPath?: string}} context
+ * @return {{configWorkingCopy: LH.Config, configDir?: string, configPath?: string}}
+ */
+function resolveWorkingCopy(config, context) {
   let {configPath} = context;
 
   if (configPath && !path.isAbsolute(configPath)) {
     throw new Error('configPath must be an absolute path');
   }
 
-  if (!configJSON) {
-    configJSON = defaultConfig;
+  if (!config) {
+    config = defaultConfig;
     configPath = defaultConfigPath;
   }
 
@@ -58,24 +68,24 @@ function resolveWorkingCopy(configJSON, context) {
   const configDir = configPath ? path.dirname(configPath) : undefined;
 
   return {
-    configWorkingCopy: deepCloneConfigJson(configJSON),
+    configWorkingCopy: deepCloneConfigJson(config),
     configPath,
     configDir,
   };
 }
 
 /**
- * @param {LH.Config.Json} configJSON
- * @return {LH.Config.Json}
+ * @param {LH.Config} config
+ * @return {LH.Config}
  */
-function resolveExtensions(configJSON) {
-  if (!configJSON.extends) return configJSON;
+function resolveExtensions(config) {
+  if (!config.extends) return config;
 
-  if (configJSON.extends !== 'lighthouse:default') {
+  if (config.extends !== 'lighthouse:default') {
     throw new Error('`lighthouse:default` is the only valid extension method.');
   }
 
-  const {artifacts, ...extensionJSON} = configJSON;
+  const {artifacts, ...extensionJSON} = config;
   const defaultClone = deepCloneConfigJson(defaultConfig);
   const mergedConfig = mergeConfigFragment(defaultClone, extensionJSON);
 
@@ -92,7 +102,7 @@ function resolveExtensions(configJSON) {
  * Looks up the required artifact IDs for each dependency, throwing if no earlier artifact satisfies the dependency.
  *
  * @param {LH.Config.ArtifactJson} artifact
- * @param {LH.Config.AnyFRGathererDefn} gatherer
+ * @param {LH.Config.AnyGathererDefn} gatherer
  * @param {Map<Symbol, LH.Config.AnyArtifactDefn>} artifactDefnsBySymbol
  * @return {LH.Config.AnyArtifactDefn['dependencies']}
  */
@@ -129,20 +139,22 @@ async function resolveArtifactsToDefns(artifacts, configDir) {
   const status = {msg: 'Resolve artifact definitions', id: 'lh:config:resolveArtifactsToDefns'};
   log.time(status, 'verbose');
 
+  const sortedArtifacts = [...artifacts];
+  sortedArtifacts.sort((a, b) => {
+    const aPriority = internalArtifactPriorities[a.id] || 0;
+    const bPriority = internalArtifactPriorities[b.id] || 0;
+    return aPriority - bPriority;
+  });
+
   /** @type {Map<Symbol, LH.Config.AnyArtifactDefn>} */
   const artifactDefnsBySymbol = new Map();
 
   const coreGathererList = Runner.getGathererList();
   const artifactDefns = [];
-  for (const artifactJson of artifacts) {
-    /** @type {LH.Config.GathererJson} */
-    // @ts-expect-error - remove when legacy runner path is removed.
+  for (const artifactJson of sortedArtifacts) {
     const gathererJson = artifactJson.gatherer;
 
     const gatherer = await resolveGathererToDefn(gathererJson, coreGathererList, configDir);
-    if (!isFRGathererDefn(gatherer)) {
-      throw new Error(`${gatherer.instance.name} gatherer does not have a Fraggle Rock meta obj`);
-    }
 
     /** @type {LH.Config.AnyArtifactDefn} */
     // @ts-expect-error - Typescript can't validate the gatherer and dependencies match
@@ -179,121 +191,78 @@ function overrideSettingsForGatherMode(settings, gatherMode) {
 /**
  * Overrides the quiet windows when throttlingMethod requires observation.
  *
- * @param {LH.Config.NavigationDefn} navigation
  * @param {LH.Config.Settings} settings
  */
-function overrideNavigationThrottlingWindows(navigation, settings) {
-  if (navigation.disableThrottling) return;
+function overrideThrottlingWindows(settings) {
   if (settings.throttlingMethod === 'simulate') return;
 
-  navigation.cpuQuietThresholdMs = Math.max(
-    navigation.cpuQuietThresholdMs || 0,
-    nonSimulatedPassConfigOverrides.cpuQuietThresholdMs
+  settings.cpuQuietThresholdMs = Math.max(
+    settings.cpuQuietThresholdMs || 0,
+    nonSimulatedSettingsOverrides.cpuQuietThresholdMs
   );
-  navigation.networkQuietThresholdMs = Math.max(
-    navigation.networkQuietThresholdMs || 0,
-    nonSimulatedPassConfigOverrides.networkQuietThresholdMs
+  settings.networkQuietThresholdMs = Math.max(
+    settings.networkQuietThresholdMs || 0,
+    nonSimulatedSettingsOverrides.networkQuietThresholdMs
   );
-  navigation.pauseAfterFcpMs = Math.max(
-    navigation.pauseAfterFcpMs || 0,
-    nonSimulatedPassConfigOverrides.pauseAfterFcpMs
+  settings.pauseAfterFcpMs = Math.max(
+    settings.pauseAfterFcpMs || 0,
+    nonSimulatedSettingsOverrides.pauseAfterFcpMs
   );
-  navigation.pauseAfterLoadMs = Math.max(
-    navigation.pauseAfterLoadMs || 0,
-    nonSimulatedPassConfigOverrides.pauseAfterLoadMs
+  settings.pauseAfterLoadMs = Math.max(
+    settings.pauseAfterLoadMs || 0,
+    nonSimulatedSettingsOverrides.pauseAfterLoadMs
   );
-}
-
-/**
- * @param {LH.Config.AnyArtifactDefn[]|null|undefined} artifactDefns
- * @param {LH.Config.Settings} settings
- * @return {LH.Config.NavigationDefn[] | null}
- */
-function resolveFakeNavigations(artifactDefns, settings) {
-  if (!artifactDefns) return null;
-
-  const status = {msg: 'Resolve navigation definitions', id: 'lh:config:resolveNavigationsToDefns'};
-  log.time(status, 'verbose');
-
-  const resolvedNavigation = {
-    ...defaultNavigationConfig,
-    artifacts: artifactDefns,
-    pauseAfterFcpMs: settings.pauseAfterFcpMs,
-    pauseAfterLoadMs: settings.pauseAfterLoadMs,
-    networkQuietThresholdMs: settings.networkQuietThresholdMs,
-    cpuQuietThresholdMs: settings.cpuQuietThresholdMs,
-    blankPage: settings.blankPage,
-  };
-
-  overrideNavigationThrottlingWindows(resolvedNavigation, settings);
-
-  const navigations = [resolvedNavigation];
-  assertArtifactTopologicalOrder(navigations);
-
-  log.timeEnd(status);
-  return navigations;
 }
 
 /**
  * @param {LH.Gatherer.GatherMode} gatherMode
- * @param {LH.Config.Json=} configJSON
+ * @param {LH.Config=} config
  * @param {LH.Flags=} flags
- * @return {Promise<{config: LH.Config.FRConfig, warnings: string[]}>}
+ * @return {Promise<{resolvedConfig: LH.Config.ResolvedConfig}>}
  */
-async function initializeConfig(gatherMode, configJSON, flags = {}) {
+async function initializeConfig(gatherMode, config, flags = {}) {
   const status = {msg: 'Initialize config', id: 'lh:config'};
   log.time(status, 'verbose');
 
-  let {configWorkingCopy, configDir} = resolveWorkingCopy(configJSON, flags);
+  let {configWorkingCopy, configDir} = resolveWorkingCopy(config, flags);
 
   configWorkingCopy = resolveExtensions(configWorkingCopy);
   configWorkingCopy = await mergePlugins(configWorkingCopy, configDir, flags);
 
   const settings = resolveSettings(configWorkingCopy.settings || {}, flags);
   overrideSettingsForGatherMode(settings, gatherMode);
+  overrideThrottlingWindows(settings);
 
   const artifacts = await resolveArtifactsToDefns(configWorkingCopy.artifacts, configDir);
 
-  const navigations = resolveFakeNavigations(artifacts, settings);
-
-  /** @type {LH.Config.FRConfig} */
-  let config = {
+  /** @type {LH.Config.ResolvedConfig} */
+  let resolvedConfig = {
     artifacts,
-    navigations,
     audits: await resolveAuditsToDefns(configWorkingCopy.audits, configDir),
     categories: configWorkingCopy.categories || null,
     groups: configWorkingCopy.groups || null,
     settings,
   };
 
-  const {warnings} = assertValidConfig(config);
+  assertValidConfig(resolvedConfig);
 
-  config = filterConfigByGatherMode(config, gatherMode);
-  config = filterConfigByExplicitFilters(config, settings);
+  resolvedConfig = filterConfigByGatherMode(resolvedConfig, gatherMode);
+  resolvedConfig = filterConfigByExplicitFilters(resolvedConfig, settings);
 
   log.timeEnd(status);
-  return {config, warnings};
+  return {resolvedConfig};
 }
 
 /**
- * @param {LH.Config.FRConfig} config
+ * @param {LH.Config.ResolvedConfig} resolvedConfig
  * @return {string}
  */
-function getConfigDisplayString(config) {
-  /** @type {LH.Config.FRConfig} */
-  const jsonConfig = JSON.parse(JSON.stringify(config));
+function getConfigDisplayString(resolvedConfig) {
+  /** @type {LH.Config.ResolvedConfig} */
+  const resolvedConfigCopy = JSON.parse(JSON.stringify(resolvedConfig));
 
-  if (jsonConfig.navigations) {
-    for (const navigation of jsonConfig.navigations) {
-      for (let i = 0; i < navigation.artifacts.length; ++i) {
-        // @ts-expect-error Breaking the Config.AnyArtifactDefn type.
-        navigation.artifacts[i] = navigation.artifacts[i].id;
-      }
-    }
-  }
-
-  if (jsonConfig.artifacts) {
-    for (const artifactDefn of jsonConfig.artifacts) {
+  if (resolvedConfigCopy.artifacts) {
+    for (const artifactDefn of resolvedConfigCopy.artifacts) {
       // @ts-expect-error Breaking the Config.AnyArtifactDefn type.
       artifactDefn.gatherer = artifactDefn.gatherer.path;
       // Dependencies are not declared on Config JSON
@@ -301,8 +270,8 @@ function getConfigDisplayString(config) {
     }
   }
 
-  if (jsonConfig.audits) {
-    for (const auditDefn of jsonConfig.audits) {
+  if (resolvedConfigCopy.audits) {
+    for (const auditDefn of resolvedConfigCopy.audits) {
       // @ts-expect-error Breaking the Config.AuditDefn type.
       auditDefn.implementation = undefined;
       if (Object.keys(auditDefn.options).length === 0) {
@@ -313,9 +282,9 @@ function getConfigDisplayString(config) {
   }
 
   // Printed config is more useful with localized strings.
-  format.replaceIcuMessages(jsonConfig, jsonConfig.settings.locale);
+  format.replaceIcuMessages(resolvedConfigCopy, resolvedConfigCopy.settings.locale);
 
-  return JSON.stringify(jsonConfig, null, 2);
+  return JSON.stringify(resolvedConfigCopy, null, 2);
 }
 
 export {
