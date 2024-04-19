@@ -121,26 +121,26 @@ const expectations = {
         // fetch('simple-script.js').then(r => r.text()).then(eval);
         {
           name: '<compiled from string in http://localhost:10200/oopif-simple-page.html>',
-          url: '',
+          url: undefined,
           content: /🪁/,
           stackTrace: undefined,
         },
         {
           name: 'eval.js',
-          url: '',
+          url: undefined,
           content: /hello from _named_ eval world/,
           // It seems chromium will only track a single frame.
           stackTrace: {callFrames: [{functionName: '', lineNumber: 22}]},
         },
         {
           name: '<compiled from string in http://localhost:10200/oopif-simple-page.html>',
-          url: '',
+          url: undefined,
           content: /hello from eval world/,
           stackTrace: {callFrames: [{functionName: 'fnWrapper1', lineNumber: 10}]},
         },
         {
           name: '<compiled from string in http://localhost:10200/oopif-simple-page.html>',
-          url: '',
+          url: undefined,
           content: /hello from setTimeout world/,
           stackTrace: undefined,
         },

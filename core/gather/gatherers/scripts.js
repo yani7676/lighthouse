@@ -139,7 +139,7 @@ class Scripts extends BaseGatherer {
       // embedderName is optional on the protocol because backends like Node may not set it.
       // For our purposes, it is always set, although it may be an empty string for scripts
       // compiled from a string at runtime. See following comments.
-      const url = event.embedderName;
+      const url = event.embedderName || undefined;
 
       // If an event.url (what we use as `name`) is empty, then the script was compiled from a string
       // (or possibly is from the protocol, but we've filtered out those protocol Runtime.evaluate scripts
