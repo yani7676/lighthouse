@@ -125,13 +125,13 @@ const expectations = {
           url: '',
           content: /hello from _named_ eval world/,
           // It seems chromium will only track a single frame.
-          stackTrace: {callFrames: [{functionName: '', lineNumber: 29}]},
+          stackTrace: {callFrames: [{functionName: '', lineNumber: 22}]},
         },
         {
           name: '<compiled from string in http://localhost:10200/oopif-simple-page.html>',
           url: '',
           content: /hello from eval world/,
-          stackTrace: {callFrames: [{functionName: 'fnWrapper1', lineNumber: 17}]},
+          stackTrace: {callFrames: [{functionName: 'fnWrapper1', lineNumber: 10}]},
         },
         {
           name: '<compiled from string in http://localhost:10200/oopif-simple-page.html>',

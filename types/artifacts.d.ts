@@ -284,7 +284,7 @@ declare module Artifacts {
      * Set by a sourceURL= magic comment if present, otherwise this is the same as the URL.
      * In some extreme cases dynamic scripts will on the protocol have neither a name or url,
      * in which case name will be `<compiled from string in X>` with some possible best-guess as to
-     * what URL create the script.
+     * what URL created the script.
      * Use this field for presentational purposes only.
      */
     name: string;
