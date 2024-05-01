@@ -17,7 +17,7 @@ const distDir = path.join(LH_ROOT, 'dist', 'lightrider');
 const sourceDir = path.join(LH_ROOT, 'clients', 'lightrider');
 
 const entrySourceName = 'lightrider-entry.js';
-const entryDistName = 'lighthouse-lr-bundle.js';
+const entryDistName = 'lighthouse-lr-bundle.cjs';
 
 fs.mkdirSync(distDir, {recursive: true});
 

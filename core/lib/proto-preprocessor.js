@@ -125,26 +125,6 @@ function processForProto(lhr) {
   return reportJson;
 }
 
-// Test if called from the CLI or as a module.
-if (esMain(import.meta)) {
-  // read in the argv for the input & output
-  const args = process.argv.slice(2);
-  let input;
-  let output;
-
-  if (args.length) {
-    // find can return undefined, so default it to '' with OR
-    input = (args.find(flag => flag.startsWith('--in')) || '').replace('--in=', '');
-    output = (args.find(flag => flag.startsWith('--out')) || '').replace('--out=', '');
-  }
-
-  if (input && output) {
-    // process the file
-    const report = processForProto(JSON.parse(fs.readFileSync(input, 'utf-8')));
-    // write to output from argv
-    fs.writeFileSync(output, JSON.stringify(report), 'utf-8');
-  }
-}
 
 export {
   processForProto,

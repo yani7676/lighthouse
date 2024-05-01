@@ -140,6 +140,7 @@ async function buildBundle(entryPath, distPath, opts = {minify: true}) {
     shimsObj[modulePath] = 'export default {}';
   }
 
+  console.log('building…');
   await esbuild.build({
     entryPoints: [entryPath],
     outfile: distPath,
@@ -163,32 +164,34 @@ async function buildBundle(entryPath, distPath, opts = {minify: true}) {
     sourcemap: 'linked',
     banner: {js: banner},
     lineLimit: 1000,
+    // logLevel: 'verbose',
     // Because of page-functions!
     keepNames: true,
     inject: ['./build/process-global.js'],
     /** @type {esbuild.Plugin[]} */
     plugins: [
-      // plugins.replaceModules({
-      //   ...shimsObj,
-      //   'url': `
-      //     export const URL = globalThis.URL;
-      //     export const fileURLToPath = url => url;
-      //     export default {URL, fileURLToPath};
-      //   `,
-      //   'module': `
-      //     export const createRequire = () => {
-      //       return {
-      //         resolve() {
-      //           throw new Error('createRequire.resolve is not supported in bundled Lighthouse');
-      //         },
-      //       };
-      //     };
-      //   `,
-      // }, {
-      //   // buildBundle is used in a lot of different contexts. Some share the same modules
-      //   // that need to be replaced, but others don't use those modules at all.
-      //   disableUnusedError: true,
-      // }),
+      plugins.replaceModules({
+        ...shimsObj,
+        'url': `
+          export const URL = globalThis.URL;
+          export const fileURLToPath = url => url;
+          export default {URL, fileURLToPath};
+        `,
+        'module': `
+          export const createRequire = (filename) => {
+            return {
+              resolve(...args) {
+                console.log('createrequire resolve', filename, args);
+                throw new Error('createRequire.resolve is not supported in bundled Lighthouse');
+              },
+            };
+          };
+        `,
+      }, {
+        // buildBundle is used in a lot of different contexts. Some share the same modules
+        // that need to be replaced, but others don't use those modules at all.
+        disableUnusedError: true,
+      }),
       // nodeModulesPolyfillPlugin(),
       plugins.bulkLoader([
         // TODO: when we used rollup, various things were tree-shaken out before inlineFs did its
@@ -233,7 +236,7 @@ async function buildBundle(entryPath, distPath, opts = {minify: true}) {
               return;
             }
 
-            const codeFile = result.outputFiles?.find(file => file.path.endsWith('.js'));
+            const codeFile = result.outputFiles?.find(file => file.path.endsWith('.cjs'));
             const mapFile = result.outputFiles?.find(file => file.path.endsWith('.js.map'));
             if (!codeFile) {
               throw new Error('missing output');
