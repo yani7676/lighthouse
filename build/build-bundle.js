@@ -144,7 +144,18 @@ async function buildBundle(entryPath, distPath, opts = {minify: true}) {
     entryPoints: [entryPath],
     outfile: distPath,
     write: false,
-    format: 'iife',
+    format: 'cjs',
+    platform: 'node',
+    supported: {
+      'class-field': false,
+      'class-private-accessor': false,
+      'class-private-brand-check': false,
+      'class-private-field': false,
+      'class-private-method': false,
+      'class-private-static-accessor': false,
+      'class-private-static-field': false,
+      'class-private-static-method': false,
+    },
     charset: 'utf8',
     bundle: true,
     minify: opts.minify,
@@ -157,28 +168,28 @@ async function buildBundle(entryPath, distPath, opts = {minify: true}) {
     inject: ['./build/process-global.js'],
     /** @type {esbuild.Plugin[]} */
     plugins: [
-      plugins.replaceModules({
-        ...shimsObj,
-        'url': `
-          export const URL = globalThis.URL;
-          export const fileURLToPath = url => url;
-          export default {URL, fileURLToPath};
-        `,
-        'module': `
-          export const createRequire = () => {
-            return {
-              resolve() {
-                throw new Error('createRequire.resolve is not supported in bundled Lighthouse');
-              },
-            };
-          };
-        `,
-      }, {
-        // buildBundle is used in a lot of different contexts. Some share the same modules
-        // that need to be replaced, but others don't use those modules at all.
-        disableUnusedError: true,
-      }),
-      nodeModulesPolyfillPlugin(),
+      // plugins.replaceModules({
+      //   ...shimsObj,
+      //   'url': `
+      //     export const URL = globalThis.URL;
+      //     export const fileURLToPath = url => url;
+      //     export default {URL, fileURLToPath};
+      //   `,
+      //   'module': `
+      //     export const createRequire = () => {
+      //       return {
+      //         resolve() {
+      //           throw new Error('createRequire.resolve is not supported in bundled Lighthouse');
+      //         },
+      //       };
+      //     };
+      //   `,
+      // }, {
+      //   // buildBundle is used in a lot of different contexts. Some share the same modules
+      //   // that need to be replaced, but others don't use those modules at all.
+      //   disableUnusedError: true,
+      // }),
+      // nodeModulesPolyfillPlugin(),
       plugins.bulkLoader([
         // TODO: when we used rollup, various things were tree-shaken out before inlineFs did its
         // thing. Now treeshaking only happens at the end, so the plugin sees more cases than it
@@ -205,7 +216,7 @@ async function buildBundle(entryPath, distPath, opts = {minify: true}) {
           onResolve({filter: /\.*/}, (args) => {
             /** @type {Record<string, string>} */
             const entries = {
-              'debug': require.resolve('debug/src/browser.js'),
+              // 'debug': require.resolve('debug/src/browser.js'),
               'lighthouse-logger': require.resolve('../lighthouse-logger/index.js'),
             };
             if (args.path in entries) {

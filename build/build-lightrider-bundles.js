@@ -67,6 +67,6 @@ async function buildStaticServerBundle() {
 
 await Promise.all([
   buildEntryPoint(),
-  buildReportGenerator(),
-  buildStaticServerBundle(),
+  // buildReportGenerator(),
+  // buildStaticServerBundle(),
 ]);
