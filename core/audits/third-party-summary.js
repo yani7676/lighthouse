@@ -104,7 +104,7 @@ class ThirdPartySummary extends Audit {
       // The amount of time spent *blocking* on main thread is the sum of all time longer than 50ms.
       // Note that this is not totally equivalent to the TBT definition since it fails to account for FCP,
       // but a majority of third-party work occurs after FCP and should yield largely similar numbers.
-      urlSummary.blockingTime += Math.max(taskDuration - 50, 0);
+      urlSummary.blockingTime += task.selfBlockingTime;
       urlSummary.tbtImpact += task.selfTbtImpact;
       byURL.set(attributableURL, urlSummary);
     }

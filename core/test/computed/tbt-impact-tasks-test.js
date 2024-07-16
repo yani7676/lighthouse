@@ -115,23 +115,28 @@ describe('TBTImpactTasks', () => {
       expect(tbtImpactTasks).toMatchObject([
         {
           tbtImpact: 3750, // 4000 (dur) - 200 (FCP cutoff) - 50 (blocking threshold)
+          selfBlockingTime: 2962.5, // 4000 (dur) - 50 (blocking threshold) - 493.75 - 493.75
           selfTbtImpact: 2862.5, // 3750 - 393.75 - 493.75
         },
         {
           tbtImpact: 393.75, // 500 (dur) - 100 (FCP cutoff) - 6.25 (50 * 500 / 4000)
+          selfBlockingTime: 493.75, // 500 (dur) - 6.25 (50 * 500 / 4000)
           selfTbtImpact: 393.75, // No children
         },
         {
           tbtImpact: 493.75, // 500 (dur) - 6.25 (50 * 500 / 4000)
+          selfBlockingTime: 493.75, // 500 (dur) - 6.25 (50 * 500 / 4000)
           selfTbtImpact: 493.75, // No children
         },
         {
           tbtImpact: 950, // 3000 (dur) - 2000 (TTI cutoff) - 50
+          selfBlockingTime: 2950, // 3000 (dur) - 50 (blocking threshold)
           selfTbtImpact: 950, // No children
         },
         {
           // Included in test trace by default
           tbtImpact: 0,
+          selfBlockingTime: 0,
           selfTbtImpact: 0,
         },
       ]);
@@ -203,23 +208,28 @@ describe('TBTImpactTasks', () => {
       expect(tbtImpactTasks).toMatchObject([
         {
           tbtImpact: 15_150, // 16_000 (dur) - 800 (FCP cutoff) - 50 (blocking threshold)
-          selfTbtImpact: 11562.5, // 15_150 - 1593.75 - 1993.75
+          selfBlockingTime: 11_962.5, // 16_000 (dur) - 50 (blocking threshold) - 1993.75 - 1993.75
+          selfTbtImpact: 11_562.5, // 15_150 - 1593.75 - 1993.75
         },
         {
           tbtImpact: 1593.75, // 2000 (dur) - 400 (FCP cutoff) - 6.25 (50 * 2000 / 16_000)
+          selfBlockingTime: 1993.75, // 2000 (dur) - 6.25 (50 * 2000 / 16_000)
           selfTbtImpact: 1593.75, // No children
         },
         {
           tbtImpact: 1993.75, // 2000 (dur) - 6.25 (50 * 2000 / 16_000)
+          selfBlockingTime: 1993.75, // 2000 (dur) - 6.25 (50 * 2000 / 16_000)
           selfTbtImpact: 1993.75, // No children
         },
         {
           tbtImpact: 3950, // 12_000 (dur) - 8000 (TTI cutoff) - 50
+          selfBlockingTime: 11_950, // 12_000 (dur) - 50
           selfTbtImpact: 3950, // No children
         },
         {
           // Included in test trace by default
           tbtImpact: 0,
+          selfBlockingTime: 0,
           selfTbtImpact: 0,
         },
       ]);
