@@ -37,7 +37,6 @@ import {taskGroups, taskNameToGroup} from './task-groups.js';
  * @prop {number} endTime
  * @prop {number} duration
  * @prop {number} selfTime
- * @prop {number} selfBlockingTime
  * @prop {string[]} attributableURLs
  * @prop {TaskGroup} group
  */
@@ -74,7 +73,6 @@ class MainThreadTasks {
       attributableURLs: [],
       group: taskGroups.other,
       selfTime: NaN,
-      selfBlockingTime: NaN,
     };
 
     return newTask;
