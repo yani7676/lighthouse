@@ -12,8 +12,8 @@ import {createTestTrace, rootFrame} from '../create-test-trace.js';
 import {networkRecordsToDevtoolsLog} from '../network-records-to-devtools-log.js';
 import {MainThreadTasks} from '../../computed/main-thread-tasks.js';
 
-const trace = readJson('../fixtures/traces/lcp-m78.json', import.meta);
-const devtoolsLog = readJson('../fixtures/traces/lcp-m78.devtools.log.json', import.meta);
+const trace = readJson('../fixtures/artifacts/cnn/defaultPass.trace.json.gz', import.meta);
+const devtoolsLog = readJson('../fixtures/artifacts/cnn/defaultPass.devtoolslog.json.gz', import.meta);
 
 describe('TBTImpactTasks', () => {
   const mainDocumentUrl = 'https://example.com';
@@ -248,10 +248,11 @@ describe('TBTImpactTasks', () => {
       };
 
       const tasks = await TBTImpactTasks.request(metricComputationData, context);
-      expect(tasks.every(t => t.selfTbtImpact >= 0)).toBeTruthy();
+      // Should be >= 0 but provide some wiggle room for double precision
+      expect(tasks.every(t => t.selfTbtImpact >= -0.00001)).toBeTruthy();
 
       const tasksImpactingTbt = tasks.filter(t => t.tbtImpact);
-      expect(tasksImpactingTbt.length).toMatchInlineSnapshot(`59`);
+      expect(tasksImpactingTbt.length).toMatchInlineSnapshot(`7374`);
 
       // Only tasks with no children should have a `selfTbtImpact` that equals `tbtImpact` if
       // `tbtImpact` is nonzero.
@@ -260,7 +261,13 @@ describe('TBTImpactTasks', () => {
       expect(tasksWithNoChildren).toEqual(tasksWithAllSelfImpact);
 
       const totalSelfImpact = tasksImpactingTbt.reduce((sum, t) => sum += t.selfTbtImpact, 0);
-      expect(totalSelfImpact).toMatchInlineSnapshot(`1234`);
+      expect(totalSelfImpact).toMatchInlineSnapshot(`2819.9999999999577`);
+
+      // Total self blocking time is just the total self impact without factoring in the TBT
+      // bounds, so it should always be greater than or equal to the total TBT self impact.
+      const totalSelfBlockingTime = tasksImpactingTbt
+        .reduce((sum, t) => sum += t.selfBlockingTime, 0);
+      expect(totalSelfImpact).toBeGreaterThanOrEqual(totalSelfBlockingTime);
 
       // The total self TBT impact of every task should equal the total TBT impact of just the top level tasks.
       const topLevelTasks = tasksImpactingTbt.filter(t => !t.parent);
@@ -291,10 +298,12 @@ describe('TBTImpactTasks', () => {
       };
 
       const tasks = await TBTImpactTasks.request(metricComputationData, context);
-      expect(tasks.every(t => t.selfTbtImpact >= 0)).toBeTruthy();
+
+      // Should be >= 0 but provide some wiggle room for double precision
+      expect(tasks.every(t => t.selfTbtImpact >= -0.00001)).toBeTruthy();
 
       const tasksImpactingTbt = tasks.filter(t => t.tbtImpact);
-      expect(tasksImpactingTbt.length).toMatchInlineSnapshot(`5`);
+      expect(tasksImpactingTbt.length).toMatchInlineSnapshot(`1722`);
 
       // Only tasks with no children should have a `selfTbtImpact` that equals `tbtImpact` if
       // `tbtImpact` is nonzero.
@@ -303,7 +312,13 @@ describe('TBTImpactTasks', () => {
       expect(tasksWithNoChildren).toEqual(tasksWithAllSelfImpact);
 
       const totalSelfImpact = tasksImpactingTbt.reduce((sum, t) => sum += t.selfTbtImpact, 0);
-      expect(totalSelfImpact).toMatchInlineSnapshot(`333.0050000000001`);
+      expect(totalSelfImpact).toMatchInlineSnapshot(`400.039`);
+
+      // Total self blocking time is just the total self impact without factoring in the TBT
+      // bounds, so it should always be greater than or equal to the total TBT self impact.
+      const totalSelfBlockingTime = tasksImpactingTbt
+        .reduce((sum, t) => sum += t.selfBlockingTime, 0);
+      expect(totalSelfImpact).toBeGreaterThanOrEqual(totalSelfBlockingTime);
 
       // The total self TBT impact of every task should equal the total TBT impact of just the top level tasks.
       const topLevelTasks = tasksImpactingTbt.filter(t => !t.parent);
